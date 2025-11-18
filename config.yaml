@@ -1,0 +1,10 @@
+log:
+  level: info
+  format: compact
+
+db:
+  name: imserver
+  host: localhost
+  port: 5432
+  username: postgres
+  password: postgres

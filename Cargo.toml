@@ -1,0 +1,18 @@
+[package]
+name = "im-server"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+
+[dependencies]
+anyhow = "1"
+thiserror = "2"
+serde = {version = "1", features = ["derive"]}
+tracing = "0.1"
+tracing-appender ="0.2"
+tracing-subscriber = {version = "0.3", features = ["env-filter", "json", "local-time"]}
+time = { version = "0.3", features = ["macros"] }
+figment = { version = "0.10", features = ["env", "toml", "yaml"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "macros", "postgres"]}
+tokio = {version = "1", features = ["full"]}
+salvo = {version = "0.84", features = ["cors", "logging", "oapi"]}
