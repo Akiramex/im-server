@@ -1,7 +1,10 @@
 use salvo::prelude::*;
 
-pub use cors::cors_hoop;
 mod cors;
+mod jwt;
+
+pub use cors::cors_hoop;
+pub use jwt::auth_hoop;
 
 const CUSTOM_404_PAGE: &str = r#"
 <!DOCTYPE html>
@@ -18,11 +21,10 @@ const CUSTOM_404_PAGE: &str = r#"
 
 #[handler]
 pub async fn error_404(&self, res: &mut Response, ctrl: &mut FlowCtrl) {
-    // if let Some(StatusCode::NOT_FOUND) = res.status_code {
-    //     res.render(Text::Html(CUSTOM_404_PAGE));
-    //     ctrl.skip_rest();
-    // }
-
-    res.render(Text::Html(CUSTOM_404_PAGE));
-    ctrl.skip_rest();
+    if let Some(StatusCode::NOT_FOUND) = res.status_code {
+        res.render("404 Not Found");
+        ctrl.skip_rest();
+    }
+    // res.render(Text::Html(CUSTOM_404_PAGE));
+    // ctrl.skip_rest();
 }

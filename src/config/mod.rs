@@ -1,4 +1,5 @@
 mod db_config;
+mod jwt_config;
 mod log_config;
 
 use figment::Figment;
@@ -7,6 +8,7 @@ use serde::Deserialize;
 use std::sync::OnceLock;
 
 pub use db_config::DbConfig;
+pub use jwt_config::JwtConfig;
 pub use log_config::LogConfig;
 
 pub static CONFIG: OnceLock<ServerConfig> = OnceLock::new();
@@ -34,6 +36,7 @@ pub fn init() {
 pub struct ServerConfig {
     pub log: LogConfig,
     pub db: DbConfig,
+    pub jwt: JwtConfig,
 }
 
 pub fn default_true() -> bool {
@@ -46,4 +49,16 @@ pub fn default_false() -> bool {
 
 pub fn get() -> &'static ServerConfig {
     CONFIG.get().expect("CONFIG should be initialized")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_config() {
+        init();
+        let config = get();
+        println!("{config:?}")
+    }
 }

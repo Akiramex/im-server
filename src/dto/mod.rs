@@ -8,3 +8,9 @@ pub struct CreateUserReq {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
 }
+
+#[derive(Deserialize)]
+pub struct LoginReq {
+    pub username: String, // 支持用户名或邮箱登录
+    pub password: String,
+}

@@ -7,13 +7,16 @@ mod api;
 mod config;
 mod db;
 mod dto;
+mod error;
 mod hoops;
 mod models;
 mod routers;
 mod service;
 mod utils;
 
-pub type JsonResult<T> = Result<Json<T>, Box<dyn std::error::Error + Send + Sync>>;
+pub use error::AppError;
+pub type AppResult<T> = Result<T, AppError>;
+pub type JsonResult<T> = Result<Json<T>, AppError>;
 
 #[tokio::main]
 async fn main() {
