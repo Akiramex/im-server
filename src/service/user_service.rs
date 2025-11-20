@@ -1,3 +1,4 @@
+use crate::AppError;
 use crate::dto::CreateUserReq;
 use crate::models::User;
 use crate::utils::hash_password;

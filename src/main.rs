@@ -1,5 +1,6 @@
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
+use serde::{Deserialize, Serialize};
 use tokio::signal;
 use tracing::info;
 
@@ -15,6 +16,7 @@ mod service;
 mod utils;
 
 pub use error::AppError;
+pub use models::AppResponse;
 pub type AppResult<T> = Result<T, AppError>;
 pub type JsonResult<T> = Result<Json<T>, AppError>;
 
@@ -27,8 +29,10 @@ async fn main() {
 
     let router = crate::routers::root();
     info!("{router:?}");
+    let catcher = Catcher::default().hoop(hoops::catch_status_error);
     let service = Service::new(router)
-        .catcher(Catcher::default().hoop(hoops::error_404))
+        .catcher(catcher)
+        .hoop(Logger::new())
         .hoop(hoops::cors_hoop());
 
     let acceptor = TcpListener::new("127.0.0.1:8080").bind().await;

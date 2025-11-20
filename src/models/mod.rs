@@ -1,3 +1,6 @@
+mod resp;
+pub use resp::AppResponse;
+
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 

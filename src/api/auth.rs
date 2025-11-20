@@ -1,4 +1,4 @@
-use crate::dto::LoginReq;
+use crate::{AppError, AppResult, dto::LoginReq};
 use salvo::{oapi::extract::JsonBody, prelude::*};
 
 #[handler]

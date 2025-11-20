@@ -4,7 +4,6 @@ use salvo::prelude::*;
 
 pub fn root() -> Router {
     let router = Router::new()
-        .hoop(Logger::new())
         .push(create_public_router())
         .push(create_private_router());
 

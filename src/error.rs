@@ -2,6 +2,8 @@ use salvo::http::{ParseError, StatusCode, StatusError};
 use salvo::prelude::*;
 use thiserror::Error;
 
+use crate::AppResponse;
+
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("public: `{0}`")]
@@ -23,18 +25,11 @@ impl Writer for AppError {
             Self::HttpStatus(err) => err.code,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        let scribe = match self {
-            Self::Public(msg) => StatusError::internal_server_error().brief(msg),
-            Self::Internal(msg) => {
-                tracing::error!(msg = msg, "internal error");
-                StatusError::internal_server_error()
-            }
-            Self::HttpStatus(e) => e,
-            e => StatusError::internal_server_error()
-                .brief(format!("Unknown error happened: {e}"))
-                .cause(e),
+        let scribe: AppResponse<_> = match self {
+            Self::Public(msg) | Self::Internal(msg) => AppResponse::error(msg),
+            e => AppResponse::error_with_code(-2, e.to_string()),
         };
         res.status_code(code);
-        res.render(scribe);
+        res.render(Json(scribe));
     }
 }
