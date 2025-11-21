@@ -1,4 +1,4 @@
-use salvo::http::{ParseError, StatusCode, StatusError};
+use salvo::http::{StatusCode, StatusError};
 use salvo::prelude::*;
 use thiserror::Error;
 
@@ -31,5 +31,15 @@ impl Writer for AppError {
         };
         res.status_code(code);
         res.render(Json(scribe));
+    }
+}
+
+impl AppError {
+    pub fn public<S: Into<String>>(msg: S) -> Self {
+        Self::Public(msg.into())
+    }
+
+    pub fn internal<S: Into<String>>(msg: S) -> Self {
+        Self::Internal(msg.into())
     }
 }

@@ -4,7 +4,6 @@ use argon2::{
     password_hash::{SaltString, rand_core::OsRng},
 };
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use time::{Duration, UtcDateTime};
 #[derive(Deserialize, Serialize, Debug)]
@@ -45,6 +44,23 @@ pub fn verify_token(token: &str) -> anyhow::Result<JwtClaims> {
     Ok(claims.claims)
 }
 
+pub fn hash_password(password: &str) -> anyhow::Result<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    Ok(PasswordHash::generate(Argon2::default(), password, &salt)
+        .map_err(|e| anyhow::anyhow!("failed to generate password hash: {}", e))?
+        .to_string())
+}
+
+pub fn verify_password(password: &str, password_hash: &str) -> anyhow::Result<()> {
+    let hash = PasswordHash::new(&password_hash)
+        .map_err(|e| anyhow::anyhow!("invalid password hash: {}", e))?;
+    let result = hash.verify_password(&[&Argon2::default()], password);
+    match result {
+        Ok(_) => Ok(()),
+        Err(_) => Err(anyhow::anyhow!("invalid password")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use time::OffsetDateTime;
@@ -52,7 +68,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_UtcDataTime() {
+    fn test_utc() {
         assert_eq!(
             UtcDateTime::now().unix_timestamp(),
             OffsetDateTime::now_utc().unix_timestamp()
@@ -67,11 +83,4 @@ mod tests {
         let claims = verify_token(&token).unwrap();
         println!("{claims:?}")
     }
-}
-
-pub fn hash_password(password: &str) -> anyhow::Result<String> {
-    let salt = SaltString::generate(&mut OsRng);
-    Ok(PasswordHash::generate(Argon2::default(), password, &salt)
-        .map_err(|e| anyhow::anyhow!("failed to generate password hash: {}", e))?
-        .to_string())
 }

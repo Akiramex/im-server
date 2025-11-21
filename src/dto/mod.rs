@@ -14,3 +14,8 @@ pub struct LoginReq {
     pub username: String, // 支持用户名或邮箱登录
     pub password: String,
 }
+
+#[derive(Serialize)]
+pub struct LoginResp {
+    pub token: String,
+}

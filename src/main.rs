@@ -1,6 +1,5 @@
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
-use serde::{Deserialize, Serialize};
 use tokio::signal;
 use tracing::info;
 

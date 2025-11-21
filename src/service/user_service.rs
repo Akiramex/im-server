@@ -1,7 +1,5 @@
 use crate::AppError;
-use crate::dto::CreateUserReq;
 use crate::models::User;
-use crate::utils::hash_password;
 use crate::utils::snowflake::generate_snowflake_id;
 use crate::{AppResult, JsonResult, db, utils};
 use salvo::writing::Json;
@@ -16,12 +14,13 @@ pub async fn create_user(
     phone: Option<String>,
 ) -> JsonResult<User> {
     if get_by_name(&name).await.is_ok() {
-        return Err(AppError::Public("用户名已被占用".to_owned()));
+        return Err(AppError::public("User name already exists"));
     }
 
     let open_id = generate_snowflake_id().to_string();
     let password_hash = utils::hash_password(&password)?;
 
+    let conn = db::pool();
     let result = sqlx::query_as!(
         UserInsertResult,
         "INSERT INTO users (open_id, name, email, password_hash, phone, status, gender)
@@ -33,8 +32,9 @@ pub async fn create_user(
         password_hash,
         phone
     )
-    .fetch_one(db::pool())
-    .await?;
+    .fetch_one(conn)
+    .await
+    .map_err(|_| AppError::internal("Failed to create user"))?;
 
     // 放到缓存
     let new_user = User::new(result.id, Some(open_id), name, email);
@@ -46,12 +46,14 @@ pub async fn get_by_name(name: &str) -> AppResult<User> {
 
     let conn = db::pool();
 
-    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+    if let Some(user) = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
         FROM users WHERE name = $1 AND (status IS NULL OR status = 1)", name)
-        .fetch_one(conn)
-        .await?;
+        .fetch_optional(conn)
+        .await? {
+            return Ok(user);
+        }
 
-    Ok(user)
+    Err(AppError::public("User not found"))
 }
 
 pub async fn get_by_email(email: &str) -> AppResult<User> {
@@ -59,16 +61,28 @@ pub async fn get_by_email(email: &str) -> AppResult<User> {
 
     let conn = db::pool();
 
-    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+    if let Some(user) = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
         FROM users WHERE email = $1 AND (status IS NULL OR status = 1)", email)
-        .fetch_one(conn)
-        .await?;
+        .fetch_optional(conn)
+        .await? {
+            return Ok(user);
+        }
 
-    Ok(user)
+    Err(AppError::public("User not found"))
 }
 
-pub async fn verify_user(email: &str, password: &str) -> AppResult<User> {
-    let user = get_by_email(email).await?;
+pub async fn verify_user(email_or_name: &str, password: &str) -> AppResult<User> {
+    let user = if email_or_name.contains('@') {
+        get_by_email(email_or_name).await?
+    } else {
+        get_by_name(email_or_name).await?
+    };
 
-    Ok(user)
+    match &user.password_hash {
+        Some(password_hash) => {
+            utils::verify_password(password, &password_hash)?;
+            Ok(user)
+        }
+        None => Err(AppError::public("Invalid password")),
+    }
 }
