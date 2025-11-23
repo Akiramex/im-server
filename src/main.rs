@@ -26,6 +26,8 @@ async fn main() {
     crate::db::init(&config.db).await;
     let _guard = config.log.guard();
 
+    info!("{config:?}");
+
     let router = crate::routers::root();
     info!("{router:?}");
     let catcher = Catcher::default().hoop(hoops::catch_status_error);

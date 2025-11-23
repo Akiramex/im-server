@@ -1,4 +1,0 @@
-[log]
-level = "error"
-format = "json"
-stdout = true

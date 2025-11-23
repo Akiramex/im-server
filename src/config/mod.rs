@@ -2,6 +2,7 @@ mod db_config;
 mod jwt_config;
 mod log_config;
 
+use crate::utils::RedisConfig;
 use figment::Figment;
 use figment::providers::{Env, Format, Toml, Yaml};
 use serde::Deserialize;
@@ -37,6 +38,7 @@ pub struct ServerConfig {
     pub log: LogConfig,
     pub db: DbConfig,
     pub jwt: JwtConfig,
+    pub redis: RedisConfig,
 }
 
 pub fn default_true() -> bool {
