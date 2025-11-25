@@ -1,6 +1,6 @@
 log:
   level: info
-  format: compact
+  format: pretty
 
 jwt:
   secret: "your_jwt_secret_key"

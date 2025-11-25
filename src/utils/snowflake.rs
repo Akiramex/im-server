@@ -63,10 +63,10 @@ impl SnowflakeGenerator {
         self.last_timestamp = current_timestamp;
 
         // 组合生成ID
-        return (current_timestamp << TIMESTAMP_SHIFT)
+        (current_timestamp << TIMESTAMP_SHIFT)
             | (self.datacenter_id << DATACENTER_ID_SHIFT)
             | (self.machine_id << MACHINE_ID_SHIFT)
-            | self.sequence;
+            | self.sequence
     }
 
     /// 获取当前时间戳（毫秒）

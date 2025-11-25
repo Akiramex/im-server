@@ -1,4 +1,5 @@
 use crate::AppError;
+use crate::dto::UserListResp;
 use crate::models::User;
 use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
@@ -32,12 +33,11 @@ async fn cache_user(user: &User) -> AppResult<()> {
 
     // 缓存用户信息，使用多个键
     let ttl = 3600u64; // 1小时
-    if let Some(ref open_id) = user.open_id {
-        if let Err(e) =
+    if let Some(ref open_id) = user.open_id
+        && let Err(e) =
             RedisClient::set_with_ttl(&cache_key_open_id(open_id), &user_json, ttl).await
-        {
-            return Err(AppError::internal(format!("Failed to cache user: {}", e)));
-        }
+    {
+        return Err(AppError::internal(format!("Failed to cache user: {}", e)));
     }
 
     if let Err(e) = RedisClient::set_with_ttl(&cache_key_name(&user.name), &user_json, ttl).await {
@@ -112,6 +112,40 @@ pub async fn create_user(
     Ok(new_user)
 }
 
+pub async fn list_users(
+    username: Option<String>,
+    current_page: i64,
+    page_size: i64,
+) -> AppResult<UserListResp> {
+    let conn = db::pool();
+    let username_filter = username.clone().unwrap_or_default();
+    let like_pattern = format!("%{}%", username_filter);
+    let offset = (current_page - 1) * page_size;
+    let total = sqlx::query_scalar!(
+        r#"
+        SELECT COUNT(*) as "count!: i64" FROM users
+        WHERE name LIKE $1
+        "#,
+        like_pattern
+    )
+    .fetch_one(conn)
+    .await?;
+
+    let users = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users
+        WHERE name LIKE $1 AND (status IS NULL OR status = 1)
+        LIMIT $2 OFFSET $3"#, like_pattern, page_size, offset)
+    .fetch_all(conn)
+    .await?;
+
+    Ok(UserListResp {
+        users,
+        total,
+        current_page,
+        page_size,
+    })
+}
+
 pub async fn get_by_name(name: &str) -> AppResult<User> {
     if let Some(user) = get_user_from_cache(name).await {
         return Ok(user);
@@ -119,14 +153,18 @@ pub async fn get_by_name(name: &str) -> AppResult<User> {
 
     let conn = db::pool();
 
-    if let Some(user) = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
         FROM users WHERE name = $1 AND (status IS NULL OR status = 1)", name)
         .fetch_optional(conn)
-        .await? {
-            return Ok(user);
-        }
+        .await?;
 
-    Err(AppError::public("User not found"))
+    match user {
+        Some(user) => {
+            let _ = cache_user(&user).await;
+            Ok(user)
+        }
+        None => Err(AppError::public("User not found")),
+    }
 }
 
 pub async fn get_by_email(email: &str) -> AppResult<User> {
@@ -136,14 +174,39 @@ pub async fn get_by_email(email: &str) -> AppResult<User> {
 
     let conn = db::pool();
 
-    if let Some(user) = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
         FROM users WHERE email = $1 AND (status IS NULL OR status = 1)", email)
         .fetch_optional(conn)
-        .await? {
-            return Ok(user);
-        }
+        .await?;
 
-    Err(AppError::public("User not found"))
+    match user {
+        Some(user) => {
+            let _ = cache_user(&user).await;
+            Ok(user)
+        }
+        None => Err(AppError::public("User not found")),
+    }
+}
+
+pub async fn get_by_open_id(open_id: &str) -> AppResult<User> {
+    if let Some(user) = get_user_from_cache(open_id).await {
+        return Ok(user);
+    }
+
+    let conn = db::pool();
+
+    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users WHERE open_id = $1 AND (status IS NULL OR status = 1)", open_id)
+        .fetch_optional(conn)
+        .await?;
+
+    match user {
+        Some(user) => {
+            let _ = cache_user(&user).await;
+            Ok(user)
+        }
+        None => Err(AppError::public("User not found")),
+    }
 }
 
 pub async fn verify_user(email_or_name: &str, password: &str) -> AppResult<User> {
@@ -155,7 +218,7 @@ pub async fn verify_user(email_or_name: &str, password: &str) -> AppResult<User>
 
     match &user.password_hash {
         Some(password_hash) => {
-            utils::verify_password(password, &password_hash)?;
+            utils::verify_password(password, password_hash)?;
             Ok(user)
         }
         None => Err(AppError::public("Invalid password")),

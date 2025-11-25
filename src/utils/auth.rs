@@ -52,7 +52,7 @@ pub fn hash_password(password: &str) -> anyhow::Result<String> {
 }
 
 pub fn verify_password(password: &str, password_hash: &str) -> anyhow::Result<()> {
-    let hash = PasswordHash::new(&password_hash)
+    let hash = PasswordHash::new(password_hash)
         .map_err(|e| anyhow::anyhow!("invalid password hash: {}", e))?;
     let result = hash.verify_password(&[&Argon2::default()], password);
     match result {

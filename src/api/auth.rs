@@ -1,5 +1,3 @@
-use std::u64;
-
 use crate::{
     AppError, JsonResult, MyResponse, config,
     dto::{LoginReq, LoginResp},
@@ -10,7 +8,8 @@ use crate::{
 use salvo::{http::cookie::Cookie, oapi::extract::JsonBody, prelude::*};
 use tracing::error;
 
-#[endpoint]
+/// 登录
+#[endpoint(tags("auth"))]
 pub async fn post_login(
     login_req: JsonBody<LoginReq>,
     res: &mut Response,
@@ -25,7 +24,7 @@ pub async fn post_login(
         .clone()
         .ok_or(AppError::public("open id not exist"))?;
 
-    depot.insert("user", user.clone());
+    depot.inject(user.clone());
 
     let open_id_number = open_id.parse::<u64>().map_err(|_| {
         error!(user_id = %user.id, open_id = %open_id, "open_id 不是数字格式，无法生成 token");

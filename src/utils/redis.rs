@@ -1,7 +1,6 @@
 use redis::{Client, aio::ConnectionManager};
 use serde::Deserialize;
-use std::sync::{Arc, OnceLock};
-use tokio::sync::Mutex;
+use std::sync::OnceLock;
 use tracing::info;
 
 #[derive(Debug, Clone, Deserialize)]

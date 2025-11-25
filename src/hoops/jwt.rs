@@ -1,6 +1,7 @@
 use salvo::jwt_auth::{self, CookieFinder, HeaderFinder, JwtTokenFinder, QueryFinder};
 use salvo::prelude::*;
 
+use crate::MyResponse;
 use crate::config;
 use crate::utils::auth::verify_token;
 
@@ -40,7 +41,7 @@ pub async fn auth_hoop(
                 depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Forbidden);
                 depot.insert(jwt_auth::JWT_AUTH_ERROR_KEY, e);
                 res.status_code(StatusCode::FORBIDDEN);
-
+                res.render(Json(MyResponse::error_with_code(-1, "用户验证失败")));
                 ctrl.skip_rest();
             }
         }
@@ -48,7 +49,7 @@ pub async fn auth_hoop(
         depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Unauthorized);
         // 自定义返回值
         res.status_code(StatusCode::UNAUTHORIZED);
-        res.render("未登录");
+        res.render(Json(MyResponse::error_with_code(-1, "用户未登录")));
         ctrl.skip_rest();
     }
 }
