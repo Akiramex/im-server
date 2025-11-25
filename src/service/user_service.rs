@@ -1,10 +1,78 @@
 use crate::AppError;
 use crate::models::User;
+use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
-use crate::{AppResult, JsonResult, db, utils};
-use salvo::writing::Json;
+use crate::{AppResult, db, utils};
+
+static USE_REDIS: bool = true;
+
 struct UserInsertResult {
     id: i64,
+}
+
+fn cache_key_open_id(open_id: &str) -> String {
+    format!("user:open_id:{}", open_id)
+}
+
+fn cache_key_name(name: &str) -> String {
+    format!("user:name:{}", name)
+}
+
+fn cache_key_email(email: &str) -> String {
+    format!("user:email:{}", email)
+}
+
+async fn cache_user(user: &User) -> AppResult<()> {
+    if !USE_REDIS {
+        return Ok(());
+    }
+
+    let user_json =
+        serde_json::to_string(user).map_err(|_| AppError::internal("User Serde_json error"))?;
+
+    // 缓存用户信息，使用多个键
+    let ttl = 3600u64; // 1小时
+    if let Some(ref open_id) = user.open_id {
+        if let Err(e) =
+            RedisClient::set_with_ttl(&cache_key_open_id(open_id), &user_json, ttl).await
+        {
+            return Err(AppError::internal(format!("Failed to cache user: {}", e)));
+        }
+    }
+
+    if let Err(e) = RedisClient::set_with_ttl(&cache_key_name(&user.name), &user_json, ttl).await {
+        return Err(AppError::internal(format!("Failed to cache user: {}", e)));
+    }
+
+    if let Err(e) = RedisClient::set_with_ttl(&cache_key_email(&user.email), &user_json, ttl).await
+    {
+        return Err(AppError::internal(format!("Failed to cache user: {}", e)));
+    }
+
+    Ok(())
+}
+
+async fn get_user_from_cache(key: &str) -> Option<User> {
+    if !USE_REDIS {
+        return None;
+    }
+    match RedisClient::get(key).await {
+        Ok(Some(user_json)) => match serde_json::from_str::<User>(&user_json) {
+            Ok(user) => {
+                tracing::debug!("从缓存获取用户信息: {}", key);
+                return Some(user);
+            }
+            Err(e) => {
+                tracing::warn!(error = ?e, "反序列化用户信息失败");
+                let _ = RedisClient::del(key).await;
+            }
+        },
+        Ok(None) => {}
+        Err(e) => {
+            tracing::warn!(error = ?e, "从缓存获取用户信息失败");
+        }
+    }
+    None
 }
 
 pub async fn create_user(
@@ -12,9 +80,12 @@ pub async fn create_user(
     email: String,
     password: String,
     phone: Option<String>,
-) -> JsonResult<User> {
+) -> AppResult<User> {
     if get_by_name(&name).await.is_ok() {
         return Err(AppError::public("User name already exists"));
+    }
+    if get_by_email(&email).await.is_ok() {
+        return Err(AppError::public("User email already exists"));
     }
 
     let open_id = generate_snowflake_id().to_string();
@@ -36,13 +107,15 @@ pub async fn create_user(
     .await
     .map_err(|_| AppError::internal("Failed to create user"))?;
 
-    // 放到缓存
     let new_user = User::new(result.id, Some(open_id), name, email);
-    Ok(Json(new_user))
+    cache_user(&new_user).await?;
+    Ok(new_user)
 }
 
 pub async fn get_by_name(name: &str) -> AppResult<User> {
-    // 从缓存里面拿 todo
+    if let Some(user) = get_user_from_cache(name).await {
+        return Ok(user);
+    }
 
     let conn = db::pool();
 
@@ -57,7 +130,9 @@ pub async fn get_by_name(name: &str) -> AppResult<User> {
 }
 
 pub async fn get_by_email(email: &str) -> AppResult<User> {
-    // 从缓存里面拿 todo
+    if let Some(user) = get_user_from_cache(email).await {
+        return Ok(user);
+    }
 
     let conn = db::pool();
 

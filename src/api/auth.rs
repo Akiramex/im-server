@@ -1,20 +1,21 @@
 use std::u64;
 
 use crate::{
-    AppError, AppResponse, JsonResult,
+    AppError, JsonResult, MyResponse, config,
     dto::{LoginReq, LoginResp},
+    json_ok,
     service::user_service,
     utils::{self},
 };
 use salvo::{http::cookie::Cookie, oapi::extract::JsonBody, prelude::*};
 use tracing::error;
 
-#[handler]
+#[endpoint]
 pub async fn post_login(
     login_req: JsonBody<LoginReq>,
     res: &mut Response,
     depot: &mut Depot,
-) -> JsonResult<AppResponse<LoginResp>> {
+) -> JsonResult<MyResponse<LoginResp>> {
     let login_req = login_req.into_inner();
 
     let user = user_service::verify_user(&login_req.username, &login_req.password).await?;
@@ -31,7 +32,7 @@ pub async fn post_login(
         AppError::public("open id not exist")
     })?;
 
-    let token = utils::get_token(open_id_number)?;
+    let token = utils::get_token(open_id_number, &config::get().jwt)?;
 
     let odata = LoginResp { token };
 
@@ -41,9 +42,5 @@ pub async fn post_login(
         .build();
 
     res.add_cookie(cookie);
-
-    Ok(Json(AppResponse::success_with_data(
-        "登录成功".to_owned(),
-        odata,
-    )))
+    json_ok(MyResponse::success_with_data("登录成功", odata))
 }

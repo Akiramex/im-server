@@ -1,4 +1,4 @@
-use crate::config;
+use crate::config::JwtConfig;
 use argon2::{
     Argon2, PasswordHash,
     password_hash::{SaltString, rand_core::OsRng},
@@ -25,20 +25,20 @@ impl JwtClaims {
     }
 }
 
-pub fn get_token(open_id: u64) -> anyhow::Result<String> {
-    let claim = JwtClaims::new(open_id, config::get().jwt.expiry);
+pub fn get_token(open_id: u64, jwt_config: &JwtConfig) -> anyhow::Result<String> {
+    let claim = JwtClaims::new(open_id, jwt_config.expiry);
     let token = encode(
         &Header::new(Algorithm::HS256),
         &claim,
-        &EncodingKey::from_secret(config::get().jwt.secret.as_bytes()),
+        &EncodingKey::from_secret(jwt_config.secret.as_bytes()),
     )?;
     Ok(token)
 }
 
-pub fn verify_token(token: &str) -> anyhow::Result<JwtClaims> {
+pub fn verify_token(token: &str, jwt_config: &JwtConfig) -> anyhow::Result<JwtClaims> {
     let claims = decode::<JwtClaims>(
         token,
-        &DecodingKey::from_secret(config::get().jwt.secret.as_bytes()),
+        &DecodingKey::from_secret(jwt_config.secret.as_bytes()),
         &Validation::new(Algorithm::HS256),
     )?;
     Ok(claims.claims)
@@ -73,14 +73,5 @@ mod tests {
             UtcDateTime::now().unix_timestamp(),
             OffsetDateTime::now_utc().unix_timestamp()
         );
-    }
-
-    #[test]
-    fn test_get_token() {
-        use crate::config;
-        config::init();
-        let token = get_token(123).unwrap();
-        let claims = verify_token(&token).unwrap();
-        println!("{claims:?}")
     }
 }

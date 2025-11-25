@@ -6,8 +6,10 @@ pub fn root() -> Router {
     let router = Router::new()
         .push(create_public_router())
         .push(create_private_router());
-
+    let doc = OpenApi::new("im-server web api", "0.0.1").merge_router(&router);
     router
+        .unshift(doc.into_router("/api-doc/openapi.json"))
+        .unshift(Scalar::new("/api-doc/openapi.json").into_router("scalar"))
 }
 
 pub fn create_public_router() -> Router {
@@ -18,6 +20,8 @@ pub fn create_public_router() -> Router {
 
 pub fn create_private_router() -> Router {
     Router::with_path("api/v1").push(
-        Router::with_hoop(hoops::auth_hoop).push(Router::with_path("users").get(user::list_users)),
+        Router::with_path("users")
+            .hoop(hoops::auth_hoop)
+            .get(user::list_users),
     )
 }

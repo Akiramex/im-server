@@ -1,6 +1,9 @@
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+use crate::models::User;
+
+#[derive(Deserialize, ToSchema)]
 pub struct CreateUserReq {
     pub name: String,
     pub email: String,
@@ -9,13 +12,13 @@ pub struct CreateUserReq {
     pub phone: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginReq {
     pub username: String, // 支持用户名或邮箱登录
     pub password: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct LoginResp {
     pub token: String,
 }

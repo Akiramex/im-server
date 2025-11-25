@@ -1,8 +1,9 @@
 use salvo::http::{StatusCode, StatusError};
+use salvo::oapi::{self, EndpointOutRegister, ToSchema};
 use salvo::prelude::*;
 use thiserror::Error;
 
-use crate::AppResponse;
+use crate::MyResponse;
 
 #[derive(Error, Debug)]
 pub enum AppError {
@@ -25,9 +26,9 @@ impl Writer for AppError {
             Self::HttpStatus(err) => err.code,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        let scribe: AppResponse<_> = match self {
-            Self::Public(msg) | Self::Internal(msg) => AppResponse::error(msg),
-            e => AppResponse::error_with_code(-2, e.to_string()),
+        let scribe: MyResponse<_> = match self {
+            Self::Public(msg) | Self::Internal(msg) => MyResponse::error(msg),
+            e => MyResponse::error_with_code(-2, e.to_string()),
         };
         res.status_code(code);
         res.render(Json(scribe));
@@ -41,5 +42,25 @@ impl AppError {
 
     pub fn internal<S: Into<String>>(msg: S) -> Self {
         Self::Internal(msg.into())
+    }
+}
+
+impl EndpointOutRegister for AppError {
+    fn register(components: &mut salvo::oapi::Components, operation: &mut salvo::oapi::Operation) {
+        operation.responses.insert(
+            StatusCode::INTERNAL_SERVER_ERROR.as_str(),
+            oapi::Response::new("Internal server error")
+                .add_content("application/json", StatusError::to_schema(components)),
+        );
+        operation.responses.insert(
+            StatusCode::NOT_FOUND.as_str(),
+            oapi::Response::new("Not found")
+                .add_content("application/json", StatusError::to_schema(components)),
+        );
+        operation.responses.insert(
+            StatusCode::BAD_REQUEST.as_str(),
+            oapi::Response::new("Bad request")
+                .add_content("application/json", StatusError::to_schema(components)),
+        );
     }
 }

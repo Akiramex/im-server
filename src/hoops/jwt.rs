@@ -1,6 +1,7 @@
 use salvo::jwt_auth::{self, CookieFinder, HeaderFinder, JwtTokenFinder, QueryFinder};
 use salvo::prelude::*;
 
+use crate::config;
 use crate::utils::auth::verify_token;
 
 #[handler]
@@ -28,7 +29,7 @@ pub async fn auth_hoop(
     };
 
     if let Some(token) = token {
-        match verify_token(&token) {
+        match verify_token(&token, &config::get().jwt) {
             Ok(data) => {
                 depot.insert(jwt_auth::JWT_AUTH_DATA_KEY, data);
                 depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Authorized);

@@ -1,18 +1,24 @@
+use crate::MyResponse;
+use crate::dto::CreateUserReq;
+use crate::json_ok;
+use crate::service::user_service;
+use crate::{JsonResult, models::User};
 use salvo::oapi::extract::JsonBody;
 use salvo::prelude::*;
 
-use crate::AppError;
-use crate::dto::CreateUserReq;
-use crate::service::user_service;
-use crate::{JsonResult, models::User};
-#[handler]
+#[endpoint]
 pub async fn list_users() -> String {
     "Hello, World!".to_string()
 }
 
-#[handler]
-pub async fn create_user(idata: JsonBody<CreateUserReq>) -> JsonResult<User> {
+#[endpoint]
+pub async fn create_user(idata: JsonBody<CreateUserReq>) -> JsonResult<MyResponse<User>> {
     let idata = idata.into_inner();
-    // 字段进行检查
-    user_service::create_user(idata.name, idata.email, idata.password, idata.phone).await
+
+    let res = user_service::create_user(idata.name, idata.email, idata.password, idata.phone).await;
+
+    match res {
+        Ok(user) => json_ok(MyResponse::success_with_data("创建用户成功", user)),
+        Err(err) => Err(err.into()),
+    }
 }

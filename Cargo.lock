@@ -1403,6 +1403,7 @@ dependencies = [
  "redis",
  "salvo",
  "serde",
+ "serde_json",
  "sqlx",
  "thiserror 2.0.17",
  "time",

@@ -1,10 +1,11 @@
 mod resp;
-pub use resp::AppResponse;
+pub use resp::MyResponse;
 
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct User {
     pub id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
