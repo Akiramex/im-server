@@ -1,4 +1,84 @@
+--
+-- Table structure for table `im_friendship`
+--
+
+DROP TABLE IF EXISTS im_friendship;
+CREATE TABLE im_friendship (
+  owner_id varchar(50) NOT NULL,
+  to_id varchar(50) NOT NULL,
+  remark varchar(50) DEFAULT NULL,
+  del_flag integer DEFAULT NULL,
+  black integer DEFAULT NULL,
+  create_time bigint DEFAULT NULL,
+  update_time bigint DEFAULT NULL,
+  sequence bigint DEFAULT NULL,
+  black_sequence bigint DEFAULT NULL,
+  add_source varchar(20) DEFAULT NULL,
+  extra varchar(1000) DEFAULT NULL,
+  version bigint DEFAULT NULL,
+  PRIMARY KEY(owner_id, to_id)
+);
+
+CREATE INDEX idx_im_friendship_owner_id ON im_friendship (owner_id);
+CREATE INDEX idx_im_friendship_to_id ON im_friendship (to_id);
+
+COMMENT ON TABLE im_friendship IS '好友关系表';
+COMMENT ON COLUMN im_friendship.owner_id IS '用户ID';
+COMMENT ON COLUMN im_friendship.to_id IS '好友用户ID';
+COMMENT ON COLUMN im_friendship.remark IS '备注';
+COMMENT ON COLUMN im_friendship.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_friendship.black IS '黑名单状态（1正常，2拉黑）';
+COMMENT ON COLUMN im_friendship.create_time IS '创建时间';
+COMMENT ON COLUMN im_friendship.update_time IS '更新时间';
+COMMENT ON COLUMN im_friendship.sequence IS '序列号';
+COMMENT ON COLUMN im_friendship.black_sequence IS '黑名单序列号';
+COMMENT ON COLUMN im_friendship.add_source IS '好友来源';
+COMMENT ON COLUMN im_friendship.extra IS '扩展字段';
+COMMENT ON COLUMN im_friendship.version IS '版本信息';
+
+--
+-- Table structure for table `im_friendship_request`
+--
+
+DROP TABLE IF EXISTS im_friendship_request;
+CREATE TABLE im_friendship_request (
+  id varchar(50) NOT NULL PRIMARY KEY,
+  from_id varchar(50) NOT NULL,
+  to_id varchar(50) NOT NULL,
+  remark varchar(50) DEFAULT NULL,
+  read_status integer DEFAULT NULL,
+  add_source varchar(20) DEFAULT NULL,
+  message varchar(50) DEFAULT NULL,
+  approve_status integer DEFAULT NULL,
+  create_time bigint DEFAULT NULL,
+  update_time bigint DEFAULT NULL,
+  sequence bigint DEFAULT NULL,
+  del_flag smallint DEFAULT NULL,
+  version bigint DEFAULT NULL
+);
+
+CREATE INDEX idx_im_friendship_request_from_id ON im_friendship_request (from_id);
+CREATE INDEX idx_im_friendship_request_to_id ON im_friendship_request (to_id);
+CREATE INDEX idx_im_friendship_request_to_id_status ON im_friendship_request (to_id, approve_status);
+
+COMMENT ON TABLE im_friendship_request IS '好友请求表';
+COMMENT ON COLUMN im_friendship_request.id IS '请求ID';
+COMMENT ON COLUMN im_friendship_request.from_id IS '请求发起者';
+COMMENT ON COLUMN im_friendship_request.to_id IS '请求接收者';
+COMMENT ON COLUMN im_friendship_request.remark IS '备注';
+COMMENT ON COLUMN im_friendship_request.read_status IS '是否已读（1已读）';
+COMMENT ON COLUMN im_friendship_request.add_source IS '好友来源';
+COMMENT ON COLUMN im_friendship_request.message IS '好友验证信息';
+COMMENT ON COLUMN im_friendship_request.approve_status IS '审批状态（1同意，2拒绝）';
+COMMENT ON COLUMN im_friendship_request.create_time IS '创建时间';
+COMMENT ON COLUMN im_friendship_request.update_time IS '更新时间';
+COMMENT ON COLUMN im_friendship_request.sequence IS '序列号';
+COMMENT ON COLUMN im_friendship_request.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_friendship_request.version IS '版本信息';
+
+--
 -- Table structure for table `im_user_data`
+--
 
 DROP TABLE IF EXISTS im_user_data;
 
@@ -44,9 +124,10 @@ COMMENT ON COLUMN im_user_data.create_time IS '创建时间';
 COMMENT ON COLUMN im_user_data.update_time IS '更新时间';
 COMMENT ON COLUMN im_user_data.version IS '版本信息';
 
-
+--
 -- Table structure for table `users`
-
+--
+--
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
