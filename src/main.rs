@@ -31,7 +31,8 @@ async fn main() {
     crate::db::init(&config.db).await;
     crate::utils::init_redis_client(&config.redis)
         .await
-        .expect("redis init error");
+        .map_err(|e| format!("redis init error: {}", e))
+        .unwrap();
 
     let router = crate::routers::root();
     info!("{config:#?}");

@@ -19,10 +19,7 @@ pub async fn post_login(
 
     let user = user_service::verify_user(&login_req.username, &login_req.password).await?;
 
-    let open_id = user
-        .open_id
-        .clone()
-        .ok_or(AppError::public("open id not exist"))?;
+    let open_id = user.open_id.clone();
 
     depot.inject(user.clone());
 

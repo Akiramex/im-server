@@ -7,6 +7,7 @@ pub struct JwtConfig {
     pub expiry: i64,
 }
 
+#[allow(dead_code)]
 impl JwtConfig {
     pub fn new(secret: String, expiry: i64) -> Self {
         JwtConfig { secret, expiry }

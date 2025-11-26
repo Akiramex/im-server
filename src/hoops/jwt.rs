@@ -1,9 +1,10 @@
 use salvo::jwt_auth::{self, CookieFinder, HeaderFinder, JwtTokenFinder, QueryFinder};
 use salvo::prelude::*;
+use tracing::warn;
 
-use crate::MyResponse;
 use crate::config;
 use crate::utils::auth::verify_token;
+use crate::{AppError, service};
 
 #[handler]
 pub async fn auth_hoop(
@@ -32,6 +33,13 @@ pub async fn auth_hoop(
     if let Some(token) = token {
         match verify_token(&token, &config::get().jwt) {
             Ok(data) => {
+                let open_id = data.open_id.to_string();
+                let user = service::user_service::get_by_open_id(&open_id).await;
+                if let Ok(user) = user {
+                    depot.inject(user);
+                } else {
+                    warn!("Failed to get user by open_id: {}", open_id);
+                }
                 depot.insert(jwt_auth::JWT_AUTH_DATA_KEY, data);
                 depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Authorized);
                 depot.insert(jwt_auth::JWT_AUTH_TOKEN_KEY, token);
@@ -40,16 +48,17 @@ pub async fn auth_hoop(
                 tracing::info!(error = ?e, "jwt auth error");
                 depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Forbidden);
                 depot.insert(jwt_auth::JWT_AUTH_ERROR_KEY, e);
-                res.status_code(StatusCode::FORBIDDEN);
-                res.render(Json(MyResponse::error_with_code(-1, "用户验证失败")));
+                AppError::unauthorized("用户验证失败")
+                    .write(req, depot, res)
+                    .await;
                 ctrl.skip_rest();
             }
         }
     } else {
         depot.insert(jwt_auth::JWT_AUTH_STATE_KEY, JwtAuthState::Unauthorized);
-        // 自定义返回值
-        res.status_code(StatusCode::UNAUTHORIZED);
-        res.render(Json(MyResponse::error_with_code(-1, "用户未登录")));
+        AppError::unauthorized("用户未登录")
+            .write(req, depot, res)
+            .await;
         ctrl.skip_rest();
     }
 }

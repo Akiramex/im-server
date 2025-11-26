@@ -8,12 +8,10 @@ use sqlx::FromRow;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct User {
     pub id: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub open_id: Option<String>,
+    pub open_id: String,
     pub name: String,
     pub email: String,
 
-    #[serde(skip_serializing)]
     pub password_hash: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -35,7 +33,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(id: i64, open_id: Option<String>, name: String, email: String) -> Self {
+    pub fn new(id: i64, open_id: String, name: String, email: String) -> Self {
         User {
             id,
             open_id,

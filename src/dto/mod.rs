@@ -36,6 +36,15 @@ fn default_page_size() -> i64 {
     10
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateUserReq {
+    pub name: Option<String>,
+    pub file_name: Option<String>,
+    pub abstract_field: Option<String>,
+    pub phone: Option<String>,
+    pub gender: Option<i32>,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct LoginReq {
     pub username: String, // 支持用户名或邮箱登录

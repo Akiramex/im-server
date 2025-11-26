@@ -24,11 +24,7 @@ pub fn create_private_router() -> Router {
             .hoop(hoops::auth_hoop)
             .post(user::create_user)
             .get(user::list_users)
-            .push(
-                Router::with_path("{id}")
-                    .get(user::get_user)
-                    .put(user::update_user)
-                    .delete(user::delete_user),
-            ),
+            .put(user::update_current_user)
+            .push(Router::with_path("{id}").get(user::get_user)),
     )
 }

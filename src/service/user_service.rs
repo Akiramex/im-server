@@ -5,7 +5,7 @@ use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
 use crate::{AppResult, db, utils};
 
-static USE_REDIS: bool = true;
+static USE_REDIS: bool = false;
 
 struct UserInsertResult {
     id: i64,
@@ -23,6 +23,10 @@ fn cache_key_email(email: &str) -> String {
     format!("user:email:{}", email)
 }
 
+fn cache_key_phone(phone: &str) -> String {
+    format!("user:phone:{}", phone)
+}
+
 async fn cache_user(user: &User) -> AppResult<()> {
     if !USE_REDIS {
         return Ok(());
@@ -33,9 +37,8 @@ async fn cache_user(user: &User) -> AppResult<()> {
 
     // 缓存用户信息，使用多个键
     let ttl = 3600u64; // 1小时
-    if let Some(ref open_id) = user.open_id
-        && let Err(e) =
-            RedisClient::set_with_ttl(&cache_key_open_id(open_id), &user_json, ttl).await
+    if let Err(e) =
+        RedisClient::set_with_ttl(&cache_key_open_id(&user.open_id), &user_json, ttl).await
     {
         return Err(AppError::internal(format!("Failed to cache user: {}", e)));
     }
@@ -45,6 +48,12 @@ async fn cache_user(user: &User) -> AppResult<()> {
     }
 
     if let Err(e) = RedisClient::set_with_ttl(&cache_key_email(&user.email), &user_json, ttl).await
+    {
+        return Err(AppError::internal(format!("Failed to cache user: {}", e)));
+    }
+
+    if let Some(phone) = &user.phone
+        && let Err(e) = RedisClient::set_with_ttl(&cache_key_phone(phone), &user_json, ttl).await
     {
         return Err(AppError::internal(format!("Failed to cache user: {}", e)));
     }
@@ -94,9 +103,9 @@ pub async fn create_user(
     let conn = db::pool();
     let result = sqlx::query_as!(
         UserInsertResult,
-        "INSERT INTO users (open_id, name, email, password_hash, phone, status, gender)
+        r#"INSERT INTO users (open_id, name, email, password_hash, phone, status, gender)
         VALUES ($1, $2, $3, $4, $5, 1, 3)
-        RETURNING id",
+        RETURNING id"#,
         open_id,
         name,
         email,
@@ -107,7 +116,7 @@ pub async fn create_user(
     .await
     .map_err(|_| AppError::internal("Failed to create user"))?;
 
-    let new_user = User::new(result.id, Some(open_id), name, email);
+    let new_user = User::new(result.id, open_id, name, email);
     cache_user(&new_user).await?;
     Ok(new_user)
 }
@@ -147,14 +156,14 @@ pub async fn list_users(
 }
 
 pub async fn get_by_name(name: &str) -> AppResult<User> {
-    if let Some(user) = get_user_from_cache(name).await {
+    if let Some(user) = get_user_from_cache(&cache_key_name(name)).await {
         return Ok(user);
     }
 
     let conn = db::pool();
 
-    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
-        FROM users WHERE name = $1 AND (status IS NULL OR status = 1)", name)
+    let user = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users WHERE name = $1 AND (status IS NULL OR status = 1)"#, name)
         .fetch_optional(conn)
         .await?;
 
@@ -163,19 +172,19 @@ pub async fn get_by_name(name: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::public("User not found")),
+        None => Err(AppError::not_found("User")),
     }
 }
 
 pub async fn get_by_email(email: &str) -> AppResult<User> {
-    if let Some(user) = get_user_from_cache(email).await {
+    if let Some(user) = get_user_from_cache(&cache_key_email(email)).await {
         return Ok(user);
     }
 
     let conn = db::pool();
 
-    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
-        FROM users WHERE email = $1 AND (status IS NULL OR status = 1)", email)
+    let user = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users WHERE email = $1 AND (status IS NULL OR status = 1)"#, email)
         .fetch_optional(conn)
         .await?;
 
@@ -184,7 +193,28 @@ pub async fn get_by_email(email: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::public("User not found")),
+        None => Err(AppError::not_found("User")),
+    }
+}
+
+pub async fn get_by_phone(phone: &str) -> AppResult<User> {
+    if let Some(user) = get_user_from_cache(&cache_key_phone(phone)).await {
+        return Ok(user);
+    }
+
+    let conn = db::pool();
+
+    let user = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users WHERE phone = $1 AND (status IS NULL OR status = 1)"#, phone)
+        .fetch_optional(conn)
+        .await?;
+
+    match user {
+        Some(user) => {
+            let _ = cache_user(&user).await;
+            Ok(user)
+        }
+        None => Err(AppError::not_found("User")),
     }
 }
 
@@ -195,8 +225,8 @@ pub async fn get_by_open_id(open_id: &str) -> AppResult<User> {
 
     let conn = db::pool();
 
-    let user = sqlx::query_as!(User, "SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
-        FROM users WHERE open_id = $1 AND (status IS NULL OR status = 1)", open_id)
+    let user = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+        FROM users WHERE open_id = $1 AND (status IS NULL OR status = 1)"#, open_id)
         .fetch_optional(conn)
         .await?;
 
@@ -205,7 +235,160 @@ pub async fn get_by_open_id(open_id: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::public("User not found")),
+        None => Err(AppError::not_found("User")),
+    }
+}
+
+pub async fn update_user(
+    open_id: &str,
+    name: Option<String>,
+    file_name: Option<String>,
+    abstract_field: Option<String>,
+    phone: Option<String>,
+    gender: Option<i32>,
+) -> AppResult<User> {
+    let conn = db::pool();
+
+    let mut tx = conn.begin().await?;
+
+    if let Some(n) = name {
+        // todo check input
+        match get_by_name(&n).await {
+            Ok(user) => {
+                if user.open_id != open_id {
+                    return Err(AppError::public("昵称已被使用"));
+                }
+            }
+            Err(AppError::NotFound(_)) => {
+                // 昵称未被占用，可以更新
+            }
+            Err(e) => return Err(e),
+        }
+
+        sqlx::query!(
+            r#"UPDATE users SET name = $1 WHERE open_id = $2"#,
+            n,
+            open_id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    if let Some(p) = &phone {
+        // todo check input
+        match get_by_phone(p).await {
+            Ok(user) => {
+                if user.open_id != open_id {
+                    return Err(AppError::public("手机号已被使用"));
+                }
+            }
+            Err(AppError::NotFound(_)) => {
+                // 手机号未被占用，可以更新
+            }
+            Err(e) => return Err(e),
+        }
+
+        if p.is_empty() {
+            sqlx::query!(
+                r#"UPDATE users SET phone = NULL WHERE open_id = $1"#,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        } else {
+            sqlx::query!(
+                r#"UPDATE users SET phone = $1 WHERE open_id = $2"#,
+                p,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    if let Some(f) = file_name {
+        // 如果 file_name 是空字符串，设置为 NULL
+        if f.is_empty() {
+            sqlx::query!(
+                r#"UPDATE users SET file_name = NULL WHERE open_id = $1"#,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        } else {
+            sqlx::query!(
+                r#"UPDATE users SET file_name = $1 WHERE open_id = $2"#,
+                f,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    if let Some(a) = abstract_field {
+        // 如果 abstract_field 是空字符串，设置为 NULL
+        if a.is_empty() {
+            sqlx::query!(
+                r#"UPDATE users SET abstract = NULL WHERE open_id = $1"#,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        } else {
+            sqlx::query!(
+                r#"UPDATE users SET abstract = $1 WHERE open_id = $2"#,
+                a,
+                open_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    if let Some(g) = gender {
+        sqlx::query!(
+            r#"UPDATE users SET gender = $1 WHERE open_id = $2"#,
+            g,
+            open_id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    let before_user = get_by_open_id(open_id).await?;
+
+    // 执行更新
+    tx.commit().await?;
+
+    // 清除缓存
+    invaliddate_user_cache(&before_user).await;
+
+    let updated_user = get_by_open_id(open_id).await?;
+    Ok(updated_user)
+}
+
+async fn invaliddate_user_cache(user: &User) {
+    // 清除缓存逻辑
+    if !USE_REDIS {
+        return;
+    }
+
+    let mut keys = vec![
+        cache_key_open_id(&user.open_id),
+        cache_key_open_id(&user.name),
+        cache_key_open_id(&user.email),
+    ];
+
+    if let Some(ref phone) = user.phone {
+        keys.push(cache_key_phone(phone));
+    }
+
+    let key_refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+    if let Err(e) = RedisClient::del_many(&key_refs).await {
+        tracing::warn!(error = ?e, "清除用户缓存失败");
+    } else {
+        tracing::debug!("清除用户缓存: {:?}", keys);
     }
 }
 
@@ -221,6 +404,6 @@ pub async fn verify_user(email_or_name: &str, password: &str) -> AppResult<User>
             utils::verify_password(password, password_hash)?;
             Ok(user)
         }
-        None => Err(AppError::public("Invalid password")),
+        None => Err(AppError::public("Invalid Password")),
     }
 }

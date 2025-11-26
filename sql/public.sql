@@ -51,7 +51,7 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
   id bigserial PRIMARY KEY,
-  open_id varchar(32) DEFAULT NULL,
+  open_id varchar(32) NOT NULL,
   name varchar(100) NOT NULL,
   email varchar(255) NOT NULL,
   file_name varchar(256) DEFAULT NULL,

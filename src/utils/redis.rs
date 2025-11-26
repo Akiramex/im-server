@@ -34,6 +34,7 @@ impl Default for RedisConfig {
     }
 }
 
+#[allow(dead_code)]
 impl RedisConfig {
     pub fn new(host: String, port: u16, db: u8, password: Option<String>) -> Self {
         Self {
@@ -77,6 +78,7 @@ pub async fn init_redis_client(config: &RedisConfig) -> anyhow::Result<()> {
 
 pub struct RedisClient;
 
+#[allow(dead_code)]
 impl RedisClient {
     pub fn get_connection() -> ConnectionManager {
         REDIS_CLIENT
