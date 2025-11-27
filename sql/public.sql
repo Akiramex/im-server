@@ -9,8 +9,8 @@ CREATE TABLE im_friendship (
   remark varchar(50) DEFAULT NULL,
   del_flag integer DEFAULT NULL,
   black integer DEFAULT NULL,
-  create_time bigint DEFAULT NULL,
-  update_time bigint DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
   sequence bigint DEFAULT NULL,
   black_sequence bigint DEFAULT NULL,
   add_source varchar(20) DEFAULT NULL,
@@ -50,8 +50,8 @@ CREATE TABLE im_friendship_request (
   add_source varchar(20) DEFAULT NULL,
   message varchar(50) DEFAULT NULL,
   approve_status integer DEFAULT NULL,
-  create_time bigint DEFAULT NULL,
-  update_time bigint DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
   sequence bigint DEFAULT NULL,
   del_flag smallint DEFAULT NULL,
   version bigint DEFAULT NULL
@@ -97,8 +97,8 @@ CREATE TABLE im_user_data (
   user_type integer NOT NULL,
   del_flag integer NOT NULL,
   extra varchar(1000),
-  create_time bigint,
-  update_time bigint,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
   version bigint
 );
 
@@ -141,12 +141,10 @@ CREATE TABLE users (
   status integer DEFAULT 1,
   gender integer DEFAULT 3,
   password_hash varchar(255) NOT NULL,
-  created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-  updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+  created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
   version bigint DEFAULT 1,
-  del_flag integer DEFAULT 1,
-  create_time bigint DEFAULT NULL,
-  update_time bigint DEFAULT NULL
+  del_flag integer DEFAULT 1
 );
 
 -- 创建索引
@@ -174,5 +172,3 @@ COMMENT ON COLUMN users.created_at IS '创建时间';
 COMMENT ON COLUMN users.updated_at IS '更新时间';
 COMMENT ON COLUMN users.version IS '版本号';
 COMMENT ON COLUMN users.del_flag IS '删除标志：1=正常，0=删除';
-COMMENT ON COLUMN users.create_time IS '创建时间戳（毫秒）';
-COMMENT ON COLUMN users.update_time IS '更新时间戳（毫秒）';
