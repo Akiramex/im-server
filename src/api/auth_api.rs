@@ -1,6 +1,6 @@
 use crate::{
     AppError, JsonResult, MyResponse, config,
-    dto::{LoginReq, LoginResp},
+    dto::{CreateUserReq, LoginReq, LoginResp, SafeUser},
     json_ok,
     service::user_service,
     utils::{self},
@@ -39,4 +39,15 @@ pub async fn post_login(
 
     res.add_cookie(cookie);
     json_ok(MyResponse::success_with_data("登录成功", odata))
+}
+
+/// 注册
+#[endpoint(tags("auth"))]
+pub async fn register(idata: JsonBody<CreateUserReq>) -> JsonResult<MyResponse<SafeUser>> {
+    let idata = idata.into_inner();
+    let res = user_service::create_user(idata.name, idata.email, idata.password, idata.phone).await;
+    match res {
+        Ok(user) => json_ok(MyResponse::success_with_data("创建用户成功", user.into())),
+        Err(err) => Err(err),
+    }
 }

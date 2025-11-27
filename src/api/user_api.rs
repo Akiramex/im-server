@@ -1,4 +1,4 @@
-use crate::dto::{CreateUserReq, UpdateUserReq, UserListQuery, UserListResp};
+use crate::dto::{CreateUserReq, SafeUser, UpdateUserReq, UserListQuery, UserListResp};
 use crate::json_ok;
 use crate::service::user_service;
 use crate::{AppError, MyResponse};
@@ -20,11 +20,11 @@ pub async fn list_users(query: &mut Request) -> JsonResult<MyResponse<UserListRe
 
 /// 创建user
 #[endpoint(tags("user"))]
-pub async fn create_user(idata: JsonBody<CreateUserReq>) -> JsonResult<MyResponse<User>> {
+pub async fn create_user(idata: JsonBody<CreateUserReq>) -> JsonResult<MyResponse<SafeUser>> {
     let idata = idata.into_inner();
     let res = user_service::create_user(idata.name, idata.email, idata.password, idata.phone).await;
     match res {
-        Ok(user) => json_ok(MyResponse::success_with_data("创建用户成功", user)),
+        Ok(user) => json_ok(MyResponse::success_with_data("创建用户成功", user.into())),
         Err(err) => Err(err),
     }
 }
@@ -34,7 +34,7 @@ pub async fn create_user(idata: JsonBody<CreateUserReq>) -> JsonResult<MyRespons
 pub async fn update_current_user(
     update_user: JsonBody<UpdateUserReq>,
     depot: &mut Depot,
-) -> JsonResult<MyResponse<User>> {
+) -> JsonResult<MyResponse<SafeUser>> {
     if let Ok(from_user) = depot.obtain::<User>() {
         let update_user = update_user.into_inner();
 
@@ -48,7 +48,10 @@ pub async fn update_current_user(
         )
         .await;
         match user {
-            Ok(user) => json_ok(MyResponse::success_with_data("更新用户信息成功", user)),
+            Ok(user) => json_ok(MyResponse::success_with_data(
+                "更新用户信息成功",
+                user.into(),
+            )),
             Err(err) => Err(err),
         }
     } else {
@@ -58,7 +61,10 @@ pub async fn update_current_user(
 
 /// 获取user
 #[endpoint(tags("user"))]
-pub async fn get_user(id: PathParam<String>, depot: &mut Depot) -> JsonResult<MyResponse<User>> {
+pub async fn get_user(
+    id: PathParam<String>,
+    depot: &mut Depot,
+) -> JsonResult<MyResponse<SafeUser>> {
     if let Ok(from_user) = depot.obtain::<User>() {
         info!(
             "查询用户，open_id 或用户名: {} (请求来自用户ID: {})",
@@ -75,7 +81,10 @@ pub async fn get_user(id: PathParam<String>, depot: &mut Depot) -> JsonResult<My
                     name = user.name,
                     "通过 open_id 找到用户"
                 );
-                return json_ok(MyResponse::success_with_data("open_id获取用户成功", user));
+                return json_ok(MyResponse::success_with_data(
+                    "open_id获取用户成功",
+                    user.into(),
+                ));
             }
             Err(AppError::NotFound(_)) => {
                 warn!(
@@ -98,7 +107,10 @@ pub async fn get_user(id: PathParam<String>, depot: &mut Depot) -> JsonResult<My
                 name = user.name,
                 "通过 name 找到用户"
             );
-            json_ok(MyResponse::success_with_data("name获取用户成功", user))
+            json_ok(MyResponse::success_with_data(
+                "name获取用户成功",
+                user.into(),
+            ))
         }
         Err(err) => Err(err),
     }

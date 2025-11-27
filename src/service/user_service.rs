@@ -1,15 +1,11 @@
 use crate::AppError;
-use crate::dto::UserListResp;
+use crate::dto::{SafeUser, UserListResp};
 use crate::models::User;
 use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
 use crate::{AppResult, db, utils};
 
 static USE_REDIS: bool = false;
-
-struct UserInsertResult {
-    id: i64,
-}
 
 fn cache_key_open_id(open_id: &str) -> String {
     format!("user:open_id:{}", open_id)
@@ -101,8 +97,7 @@ pub async fn create_user(
     let password_hash = utils::hash_password(&password)?;
 
     let conn = db::pool();
-    let result = sqlx::query_as!(
-        UserInsertResult,
+    let result_id = sqlx::query_scalar!(
         r#"INSERT INTO users (open_id, name, email, password_hash, phone, status, gender)
         VALUES ($1, $2, $3, $4, $5, 1, 3)
         RETURNING id"#,
@@ -116,7 +111,7 @@ pub async fn create_user(
     .await
     .map_err(|_| AppError::internal("Failed to create user"))?;
 
-    let new_user = User::new(result.id, open_id, name, email);
+    let new_user = User::new(result_id, open_id, name, email);
     cache_user(&new_user).await?;
     Ok(new_user)
 }
@@ -140,7 +135,7 @@ pub async fn list_users(
     .fetch_one(conn)
     .await?;
 
-    let users = sqlx::query_as!(User, r#"SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+    let users = sqlx::query_as!(SafeUser, r#"SELECT id, open_id, name, email, file_name, abstract as abstract_field, phone, status, gender
         FROM users
         WHERE name LIKE $1 AND (status IS NULL OR status = 1)
         LIMIT $2 OFFSET $3"#, like_pattern, page_size, offset)
@@ -172,7 +167,7 @@ pub async fn get_by_name(name: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::not_found("User")),
+        None => Err(AppError::not_found(name)),
     }
 }
 
@@ -193,7 +188,7 @@ pub async fn get_by_email(email: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::not_found("User")),
+        None => Err(AppError::not_found(email)),
     }
 }
 
@@ -214,7 +209,7 @@ pub async fn get_by_phone(phone: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::not_found("User")),
+        None => Err(AppError::not_found(phone)),
     }
 }
 
@@ -235,7 +230,7 @@ pub async fn get_by_open_id(open_id: &str) -> AppResult<User> {
             let _ = cache_user(&user).await;
             Ok(user)
         }
-        None => Err(AppError::not_found("User")),
+        None => Err(AppError::not_found(open_id)),
     }
 }
 

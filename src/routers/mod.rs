@@ -14,17 +14,28 @@ pub fn root() -> Router {
 
 pub fn create_public_router() -> Router {
     Router::with_path("auth")
-        .push(Router::with_path("login").post(auth::post_login))
-        .push(Router::with_path("register").post(user::create_user))
+        .push(Router::with_path("login").post(auth_api::post_login))
+        .push(Router::with_path("register").post(auth_api::register))
 }
 
 pub fn create_private_router() -> Router {
-    Router::with_path("api/v1").push(
-        Router::with_path("users")
-            .hoop(hoops::auth_hoop)
-            .post(user::create_user)
-            .get(user::list_users)
-            .put(user::update_current_user)
-            .push(Router::with_path("{id}").get(user::get_user)),
-    )
+    Router::with_path("api/v1")
+        .push(
+            Router::with_path("users")
+                .hoop(hoops::auth_hoop)
+                .post(user_api::create_user)
+                .get(user_api::list_users)
+                .put(user_api::update_current_user)
+                .push(Router::with_path("{id}").get(user_api::get_user)),
+        )
+        .push(
+            Router::with_path("friends")
+                .hoop(hoops::auth_hoop)
+                .get(friend_api::get_friends)
+                .push(
+                    Router::with_path("{id}")
+                        .post(friend_api::add_friend)
+                        .delete(friend_api::remove_friend),
+                ),
+        )
 }

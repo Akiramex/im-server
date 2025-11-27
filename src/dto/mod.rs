@@ -12,6 +12,46 @@ pub struct CreateUserReq {
     pub phone: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SafeUser {
+    pub id: i64,
+    pub open_id: String,
+    pub name: String,
+    pub email: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename(serialize = "abstract"))]
+    pub abstract_field: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gender: Option<i32>,
+}
+
+impl Into<SafeUser> for User {
+    fn into(self) -> SafeUser {
+        SafeUser {
+            id: self.id,
+            open_id: self.open_id,
+            name: self.name,
+            email: self.email,
+            file_name: self.file_name,
+            abstract_field: self.abstract_field,
+            phone: self.phone,
+            status: self.status,
+            gender: self.gender,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UserListQuery {
     pub username: Option<String>,
@@ -23,7 +63,7 @@ pub struct UserListQuery {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct UserListResp {
-    pub users: Vec<User>,
+    pub users: Vec<SafeUser>,
     pub total: i64,
     pub current_page: i64,
     pub page_size: i64,
