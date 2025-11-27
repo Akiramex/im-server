@@ -1,5 +1,4 @@
 use crate::utils::now_timestamp;
-use salvo::oapi::info;
 use time::OffsetDateTime;
 
 use crate::AppError;
