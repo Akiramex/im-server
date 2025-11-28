@@ -1,11 +1,11 @@
 use crate::AppError;
-use crate::dto::{SafeUser, UserListResp};
-use crate::models::User;
+use crate::dto::UserListResp;
+use crate::models::{SafeUser, User};
 use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
 use crate::{AppResult, db, utils};
 
-static USE_REDIS: bool = false;
+static USE_REDIS: bool = true;
 
 fn cache_key_open_id(open_id: &str) -> String {
     format!("user:open_id:{}", open_id)

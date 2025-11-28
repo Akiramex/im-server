@@ -1,7 +1,6 @@
 use crate::{
-    AppError, JsonResult, MyResponse,
-    dto::SafeUser,
-    json_ok,
+    AppError, JsonResult, MyResponse, json_ok,
+    models::SafeUser,
     models::User,
     service::{friend_service, user_service},
 };

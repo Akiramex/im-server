@@ -1,7 +1,8 @@
 use crate::{
     AppError, JsonResult, MyResponse, config,
-    dto::{CreateUserReq, LoginReq, LoginResp, SafeUser},
+    dto::{CreateUserReq, LoginReq, LoginResp},
     json_ok,
+    models::SafeUser,
     service::user_service,
     utils::{self},
 };

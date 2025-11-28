@@ -1,11 +1,11 @@
+use crate::service::user_service::get_by_name;
 use crate::utils::now_timestamp;
 use time::OffsetDateTime;
 
 use crate::AppError;
 use crate::AppResult;
 use crate::db;
-use crate::dto::SafeUser;
-
+use crate::models::SafeUser;
 pub async fn add_friend(user_id: &str, friend_id: &str) -> AppResult<()> {
     let conn = db::pool();
 

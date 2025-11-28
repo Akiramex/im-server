@@ -1,5 +1,6 @@
-use crate::dto::{CreateUserReq, SafeUser, UpdateUserReq, UserListQuery, UserListResp};
+use crate::dto::{CreateUserReq, UpdateUserReq, UserListQuery, UserListResp};
 use crate::json_ok;
+use crate::models::SafeUser;
 use crate::service::user_service;
 use crate::{AppError, MyResponse};
 use crate::{JsonResult, models::User};
@@ -65,6 +66,7 @@ pub async fn get_user(
     id: PathParam<String>,
     depot: &mut Depot,
 ) -> JsonResult<MyResponse<SafeUser>> {
+    let id = id.into_inner();
     if let Ok(from_user) = depot.obtain::<User>() {
         info!(
             "查询用户，open_id 或用户名: {} (请求来自用户ID: {})",

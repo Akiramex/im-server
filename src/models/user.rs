@@ -1,6 +1,6 @@
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: i64,
@@ -41,6 +41,46 @@ impl User {
             phone: None,
             status: None,
             gender: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SafeUser {
+    pub id: i64,
+    pub open_id: String,
+    pub name: String,
+    pub email: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename(serialize = "abstract"))]
+    pub abstract_field: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gender: Option<i32>,
+}
+
+impl From<User> for SafeUser {
+    fn from(val: User) -> Self {
+        SafeUser {
+            id: val.id,
+            open_id: val.open_id,
+            name: val.name,
+            email: val.email,
+            file_name: val.file_name,
+            abstract_field: val.abstract_field,
+            phone: val.phone,
+            status: val.status,
+            gender: val.gender,
         }
     }
 }
