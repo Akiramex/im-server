@@ -144,9 +144,9 @@ CREATE TABLE users (
   created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
   version bigint DEFAULT 1,
-  del_flag integer DEFAULT 1
+  del_flag integer DEFAULT 1,
   create_time bigint DEFAULT NULL,
-  update_time bigint DEFAULT NULL,
+  update_time bigint DEFAULT NULL
 );
 
 -- 创建索引
