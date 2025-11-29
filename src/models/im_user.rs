@@ -76,8 +76,10 @@ pub struct ImUserData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "time::serde::rfc3339::option")]
     pub create_time: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "time::serde::rfc3339::option")]
     pub update_time: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<i64>,

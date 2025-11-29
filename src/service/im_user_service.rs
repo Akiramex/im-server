@@ -194,6 +194,12 @@ pub async fn create(
     mobile: Option<String>,
 ) -> AppResult<ImSafeUser> {
     let conn = db::pool();
+
+    //
+    let _ = user_id
+        .parse::<i64>()
+        .map_err(|_| AppError::public("user_id 必须为数字"))?;
+
     // 检查用户名是否已存在
     if get_by_user_name(&user_name).await.is_ok() {
         return Err(AppError::public(format!("{user_name} 已经存在")));
@@ -240,8 +246,8 @@ pub async fn create(
         del_flag: Some(1),
     };
 
-    let offset_data_time =
-        OffsetDateTime::from_unix_timestamp(now).map_err(|e| AppError::internal(e.to_string()))?;
+    let offset_data_time = OffsetDateTime::from_unix_timestamp(now / 1000)
+        .unwrap_or_else(|_| OffsetDateTime::now_utc());
 
     // 自动创建对应的 im_user_data 记录
     let default_user_data = ImUserData {

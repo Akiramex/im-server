@@ -54,3 +54,80 @@ pub struct ImFriendshipRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<i64>,
 }
+
+impl ImFriendshipRequest {
+    pub fn new(
+        id: String,
+        from_id: String,
+        to_id: String,
+        remark: Option<String>,
+        read_status: Option<i32>,
+        add_source: Option<String>,
+        message: Option<String>,
+        approve_status: Option<i32>,
+        create_time: Option<OffsetDateTime>,
+        update_time: Option<OffsetDateTime>,
+        sequence: Option<i64>,
+        del_flag: Option<i16>,
+        version: Option<i64>,
+    ) -> Self {
+        Self {
+            id,
+            from_id,
+            to_id,
+            remark,
+            read_status,
+            add_source,
+            message,
+            approve_status,
+            create_time,
+            update_time,
+            sequence,
+            del_flag,
+            version,
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        if self.id.is_empty() {
+            return Err("好友请求ID为空".to_string());
+        }
+        if self.from_id.is_empty() {
+            return Err("发送者ID为空".to_string());
+        }
+        if self.to_id.is_empty() {
+            return Err("接收者ID为空".to_string());
+        }
+        if self.from_id == self.to_id {
+            return Err("发送者和接收者不能相同".to_string());
+        }
+        if self.id.len() > 100 {
+            return Err(format!("好友请求ID长度超过限制: {} > 100", self.id.len()));
+        }
+        if self.from_id.len() > 100 {
+            return Err(format!(
+                "发送者ID长度超过限制: {} > 100",
+                self.from_id.len()
+            ));
+        }
+        if self.to_id.len() > 100 {
+            return Err(format!("接收者ID长度超过限制: {} > 100", self.to_id.len()));
+        }
+        if let Some(ref remark) = self.remark {
+            if remark.len() > 100 {
+                return Err(format!("备注长度超过限制: {} > 100", remark.len()));
+            }
+        }
+        if let Some(ref message) = self.message {
+            if message.len() > 500 {
+                return Err(format!("验证消息长度超过限制: {} > 500", message.len()));
+            }
+        }
+        if let Some(ref add_source) = self.add_source {
+            if add_source.len() > 100 {
+                return Err(format!("添加来源长度超过限制: {} > 100", add_source.len()));
+            }
+        }
+        Ok(())
+    }
+}

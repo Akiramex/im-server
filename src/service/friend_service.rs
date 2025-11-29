@@ -1,4 +1,3 @@
-use crate::service::user_service::get_by_name;
 use crate::utils::now_timestamp;
 use time::OffsetDateTime;
 
@@ -13,54 +12,39 @@ pub async fn add_friend(user_id: &str, friend_id: &str) -> AppResult<()> {
         return Err(AppError::public("不能重复添加好友"));
     }
 
-    // 曾经是好友
-    let result = sqlx::query_scalar!(
-        r#"SELECT COUNT(*) as "count!: i64" FROM im_friendship
-        WHERE((owner_id = $1 AND to_id = $2) OR (owner_id = $2 AND to_id = $1))
-        AND (del_flag = 0)
-        AND (black IS NULL OR black = 1)"#,
-        user_id,
-        friend_id,
-    )
-    .fetch_one(conn)
-    .await?;
-
-    tracing::info!("result: {}", result);
-    // 恢复朋友关系
-    if result > 0 {
-        sqlx::query!(
-            r#"UPDATE im_friendship
-            SET del_flag = 1, update_time = $1, version = version + 1
-            WHERE((owner_id = $2 AND to_id = $3) OR (owner_id = $3 AND to_id = $2))
-            "#,
-            OffsetDateTime::now_utc(),
-            user_id,
-            friend_id
-        )
-        .execute(conn)
-        .await?;
-
-        return Ok(());
-    }
-
     // 插入好友关系，双向
     let now = now_timestamp();
+    let timestamp = OffsetDateTime::now_utc();
     sqlx::query!(
-        r#"INSERT INTO im_friendship(owner_id, to_id, remark, del_flag, black , sequence, add_source, version)
-        VALUES($1, $2, NULL, 1, 1, $3,'api', 1)"#,
+        r#"
+            INSERT INTO im_friendship(owner_id, to_id, remark, del_flag, black , sequence, add_source, version)
+            VALUES($1, $2, NULL, 1, 1, $3, 'api' , 1)
+            ON CONFLICT(owner_id, to_id) DO UPDATE SET
+            del_flag = 1,
+            update_time = $4,
+            version = im_friendship.version + 1
+        "#,
         user_id,
         friend_id,
-        now
+        now,
+        timestamp
     )
     .execute(conn)
     .await?;
 
     sqlx::query!(
-        r#"INSERT INTO im_friendship(owner_id, to_id, remark, del_flag, black , sequence, add_source, version)
-        VALUES($1, $2, NULL, 1, 1, $3,'api', 1)"#,
+        r#"
+            INSERT INTO im_friendship(owner_id, to_id, remark, del_flag, black , sequence, add_source, version)
+            VALUES($1, $2, NULL, 1, 1, $3,'api', 1)
+            ON CONFLICT(owner_id, to_id) DO UPDATE SET
+            del_flag = 1,
+            update_time = $4,
+            version = im_friendship.version + 1
+        "#,
         friend_id,
         user_id,
-        now
+        now,
+        timestamp
     )
     .execute(conn)
     .await?;
