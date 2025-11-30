@@ -51,7 +51,39 @@ pub fn create_router() -> Vec<Router> {
                                 ),
                         ),
                 )
-                .push(Router::with_path("auth").post(im_user_api::login)),
+                .push(Router::with_path("auth").post(im_user_api::login))
+                .push(
+                    Router::with_path("friendships/{open_id}/friends")
+                        .get(im_friendship_api::get_friends_by_open_id),
+                )
+                .push(
+                    Router::with_path("friends")
+                        .hoop(auth_hoop)
+                        .get(im_friendship_api::get_friends)
+                        .post(im_friendship_api::add_friend)
+                        .push(
+                            Router::with_path("{to_id}")
+                                .delete(im_friendship_api::remove_friend)
+                                .push(
+                                    Router::with_path("remark")
+                                        .put(im_friendship_api::update_remark),
+                                )
+                                .push(
+                                    Router::with_path("black")
+                                        .post(im_friendship_api::black_friend),
+                                ),
+                        ),
+                )
+                .push(
+                    Router::with_path("friendship-requests")
+                        .hoop(auth_hoop)
+                        .get(im_friendship_api::get_friendship_requests)
+                        .post(im_friendship_api::create_friendship_request)
+                        .push(
+                            Router::with_path("{request_id}")
+                                .post(im_friendship_api::handle_friendship_request),
+                        ),
+                ),
         );
 
     vec![v1]

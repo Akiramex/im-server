@@ -1,7 +1,8 @@
 use salvo::oapi::ToSchema;
+
 use serde::{Deserialize, Serialize};
 
-use crate::models::SafeUser;
+use crate::models::{SafeUser, im_friendship::ImFriendship, im_friendship::ImFriendshipRequest};
 
 #[derive(Deserialize, ToSchema)]
 pub struct CreateUserReq {
@@ -63,4 +64,54 @@ pub struct LoginReq {
 #[derive(Serialize, ToSchema)]
 pub struct LoginResp {
     pub token: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct HandleFriendshipRequests {
+    pub approve_status: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema, Default)]
+pub struct GetFriendshipRequests {
+    pub approve_status: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct GetFriendshipResp {
+    pub friendship_req: ImFriendshipRequest,
+    pub user: Option<SafeUser>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct GetFriendsResp {
+    pub friendship: ImFriendship,
+    pub user: Option<SafeUser>,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct UpdateRemarkReq {
+    pub remark: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct SimpleFriendshipResp {
+    pub to_id: String,
+    pub owner_id: String,
+}
+
+impl From<ImFriendship> for SimpleFriendshipResp {
+    fn from(friendship: ImFriendship) -> Self {
+        SimpleFriendshipResp {
+            to_id: friendship.to_id,
+            owner_id: friendship.owner_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct AddFriendRequest {
+    pub to_id: String,
+    pub remark: Option<String>,
+    pub add_source: Option<String>,
+    pub message: Option<String>, // 好友验证信息
 }

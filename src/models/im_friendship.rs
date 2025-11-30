@@ -1,8 +1,9 @@
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ImFriendship {
     pub owner_id: String,
     pub to_id: String,
@@ -28,7 +29,7 @@ pub struct ImFriendship {
     pub version: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ImFriendshipRequest {
     pub id: String,
     pub from_id: String,
