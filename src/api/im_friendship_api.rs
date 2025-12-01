@@ -12,6 +12,9 @@ use crate::service::{im_friendship_service, user_service};
 use crate::{AppError, JsonResult, MyResponse, json_ok, utils};
 use tracing::{error, info, warn};
 
+/// 根据open_id获取好友列表
+///
+/// 不需要登录
 #[endpoint[tags("im_friendship")]]
 pub async fn get_friends_by_open_id(
     open_id: PathParam<String>,
@@ -28,6 +31,7 @@ pub async fn get_friends_by_open_id(
     }
 }
 
+/// 获取好友列表
 #[endpoint[tags("im_friendship")]]
 pub async fn get_friends(depot: &mut Depot) -> JsonResult<MyResponse<Vec<GetFriendsResp>>> {
     if let Ok(from_user) = depot.obtain::<User>() {
@@ -66,6 +70,7 @@ pub async fn get_friends(depot: &mut Depot) -> JsonResult<MyResponse<Vec<GetFrie
     }
 }
 
+/// 添加好友
 #[endpoint[tags("im_friendship")]]
 pub async fn add_friend(
     depot: &mut Depot,
@@ -181,7 +186,7 @@ pub async fn add_friend(
 
                 if let Ok(to_user) = to_user {
                     error!("嘟嘟嘟 --- MQTT功能待完成");
-                    todo!()
+                    //todo!()
                 } else {
                     warn!(to_id = %to_id_clone, "无法获取接收者信息，无法通过MQTT发送好友请求通知");
                     // 无法获取用户信息时，无法通过 MQTT 发布，但好友请求已保存到数据库
@@ -200,6 +205,7 @@ pub async fn add_friend(
     }
 }
 
+/// 删除好友
 #[endpoint[tags("im_friendship")]]
 pub async fn remove_friend(
     depot: &mut Depot,
@@ -255,6 +261,7 @@ pub async fn remove_friend(
     }
 }
 
+/// 更新备注
 #[endpoint[tags("im_friendship")]]
 pub async fn update_remark(
     depot: &mut Depot,
@@ -273,6 +280,7 @@ pub async fn update_remark(
     }
 }
 
+/// 切换拉黑状态
 #[endpoint[tags("im_friendship")]]
 pub async fn black_friend(
     depot: &mut Depot,
@@ -289,6 +297,7 @@ pub async fn black_friend(
     }
 }
 
+/// 创建好友申请
 #[endpoint[tags("im_friendship")]]
 pub async fn create_friendship_request(
     req: JsonBody<ImFriendshipRequest>,
@@ -301,6 +310,7 @@ pub async fn create_friendship_request(
     }
 }
 
+/// 获取好友申请
 #[endpoint[tags("im_friendship")]]
 pub async fn get_friendship_requests(
     query: QueryParam<GetFriendshipRequests, false>,
@@ -380,6 +390,9 @@ pub async fn get_friendship_requests(
     }
 }
 
+/// 处理好友申请
+///
+/// 1：同意 2：拒绝
 #[endpoint[tags("im_friendship")]]
 pub async fn handle_friendship_request(
     request_id: PathParam<String>,

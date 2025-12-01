@@ -1,45 +1,42 @@
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use uuid::Uuid;
+use dashmap::DashMap;
+use std::sync::Arc;
+use ulid::Ulid;
 
 /// 订阅 ID 管理服务
 /// 维护用户 ID 和订阅 ID 的映射关系
 #[derive(Clone)]
 pub struct SubscriptionService {
     // 订阅 ID -> 用户 ID
-    subscriptions: Arc<RwLock<HashMap<String, u64>>>,
+    subscriptions: Arc<DashMap<String, u64>>,
     // 用户 ID -> 订阅 ID 列表（一个用户可以有多个设备）
-    user_subscriptions: Arc<RwLock<HashMap<u64, Vec<String>>>>,
+    user_subscriptions: Arc<DashMap<u64, Vec<String>>>,
 }
 
 impl SubscriptionService {
     pub fn new() -> Self {
         Self {
-            subscriptions: Arc::new(RwLock::new(HashMap::new())),
-            user_subscriptions: Arc::new(RwLock::new(HashMap::new())),
+            subscriptions: Arc::new(DashMap::new()),
+            user_subscriptions: Arc::new(DashMap::new()),
         }
     }
 
     /// 为用户生成或获取订阅 ID
     /// 如果用户已有订阅 ID，返回现有的；否则生成新的
     pub fn get_or_create_subscription_id(&self, user_id: u64) -> String {
-        let mut user_subs = self.user_subscriptions.write().unwrap();
-
         // 如果用户已有订阅 ID，返回第一个
-        if let Some(subs) = user_subs.get(&user_id) {
+        if let Some(subs) = self.user_subscriptions.get(&user_id) {
             if !subs.is_empty() {
                 return subs[0].clone();
             }
         }
 
         // 生成新的订阅 ID
-        let subscription_id = format!("sub_{}", Uuid::new_v4().to_string().replace("-", ""));
+        let subscription_id = format!("sub_{}", Ulid::new().to_string());
 
         // 更新映射关系
-        let mut subs = self.subscriptions.write().unwrap();
-        subs.insert(subscription_id.clone(), user_id);
+        self.subscriptions.insert(subscription_id.clone(), user_id);
 
-        user_subs
+        self.user_subscriptions
             .entry(user_id)
             .or_insert_with(Vec::new)
             .push(subscription_id.clone());
@@ -49,13 +46,11 @@ impl SubscriptionService {
 
     /// 创建新的订阅 ID（允许多设备登录）
     pub fn create_subscription_id(&self, user_id: u64) -> String {
-        let subscription_id = format!("sub_{}", Uuid::new_v4().to_string().replace("-", ""));
+        let subscription_id = format!("sub_{}", Ulid::new().to_string());
 
-        let mut subs = self.subscriptions.write().unwrap();
-        subs.insert(subscription_id.clone(), user_id);
+        self.subscriptions.insert(subscription_id.clone(), user_id);
 
-        let mut user_subs = self.user_subscriptions.write().unwrap();
-        user_subs
+        self.user_subscriptions
             .entry(user_id)
             .or_insert_with(Vec::new)
             .push(subscription_id.clone());
@@ -65,25 +60,27 @@ impl SubscriptionService {
 
     /// 根据订阅 ID 获取用户 ID
     pub fn get_user_id(&self, subscription_id: &str) -> Option<u64> {
-        let subs = self.subscriptions.read().unwrap();
-        subs.get(subscription_id).copied()
+        self.subscriptions.get(subscription_id).map(|v| *v.value())
     }
 
     /// 根据用户 ID 获取所有订阅 ID
     pub fn get_subscription_ids(&self, user_id: u64) -> Vec<String> {
-        let user_subs = self.user_subscriptions.read().unwrap();
-        user_subs.get(&user_id).cloned().unwrap_or_default()
+        self.user_subscriptions
+            .get(&user_id)
+            .map(|v| v.value().clone())
+            .unwrap_or_default()
     }
 
     /// 删除订阅 ID
     pub fn remove_subscription(&self, subscription_id: &str) {
-        let mut subs = self.subscriptions.write().unwrap();
-        if let Some(user_id) = subs.remove(subscription_id) {
-            let mut user_subs = self.user_subscriptions.write().unwrap();
-            if let Some(subs_list) = user_subs.get_mut(&user_id) {
+        if let Some((_k, user_id)) = self.subscriptions.remove(subscription_id) {
+            if let Some(mut subs_list) = self.user_subscriptions.get_mut(&user_id) {
                 subs_list.retain(|s| s != subscription_id);
-                if subs_list.is_empty() {
-                    user_subs.remove(&user_id);
+                let should_remove = subs_list.is_empty();
+                // drop the guard before calling remove to avoid deadlock
+                drop(subs_list);
+                if should_remove {
+                    self.user_subscriptions.remove(&user_id);
                 }
             }
         }
@@ -91,24 +88,23 @@ impl SubscriptionService {
 
     /// 删除用户的所有订阅
     pub fn remove_user_subscriptions(&self, user_id: u64) {
-        let mut user_subs = self.user_subscriptions.write().unwrap();
-        if let Some(subs) = user_subs.remove(&user_id) {
-            let mut subscriptions = self.subscriptions.write().unwrap();
+        if let Some((_k, subs)) = self.user_subscriptions.remove(&user_id) {
             for sub_id in subs {
-                subscriptions.remove(&sub_id);
+                self.subscriptions.remove(&sub_id);
             }
         }
     }
 
     /// 手动添加订阅 ID（用于从数据库同步到内存）
     pub fn add_subscription_id(&self, subscription_id: String, user_id: u64) {
-        let mut subs = self.subscriptions.write().unwrap();
-        subs.insert(subscription_id.clone(), user_id);
+        self.subscriptions.insert(subscription_id.clone(), user_id);
 
-        let mut user_subs = self.user_subscriptions.write().unwrap();
-        let user_sub_list = user_subs.entry(user_id).or_insert_with(Vec::new);
-        if !user_sub_list.contains(&subscription_id) {
-            user_sub_list.push(subscription_id);
+        let mut entry = self
+            .user_subscriptions
+            .entry(user_id)
+            .or_insert_with(Vec::new);
+        if !entry.contains(&subscription_id) {
+            entry.push(subscription_id);
         }
     }
 }
@@ -261,4 +257,64 @@ pub async fn get_user_info_by_subscription(
         url,
         server_url
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SubscriptionService;
+
+    #[test]
+    fn test_create_and_get_subscription() {
+        let svc = SubscriptionService::new();
+        let user_id = 42u64;
+
+        let sub_id = svc.create_subscription_id(user_id);
+        assert!(sub_id.starts_with("sub_"));
+
+        let fetched = svc.get_user_id(&sub_id).expect("user id should exist");
+        assert_eq!(fetched, user_id);
+
+        let subs = svc.get_subscription_ids(user_id);
+        assert_eq!(subs.len(), 1);
+        assert_eq!(subs[0], sub_id);
+    }
+
+    #[test]
+    fn test_get_or_create_returns_existing() {
+        let svc = SubscriptionService::new();
+        let user_id = 100u64;
+        let first = svc.get_or_create_subscription_id(user_id);
+        let second = svc.get_or_create_subscription_id(user_id);
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn test_add_and_remove_subscription() {
+        let svc = SubscriptionService::new();
+        let user_id = 7u64;
+        let sub_id = "sub_manual_1".to_string();
+
+        svc.add_subscription_id(sub_id.clone(), user_id);
+        assert_eq!(svc.get_user_id(&sub_id).unwrap(), user_id);
+        assert!(svc.get_subscription_ids(user_id).contains(&sub_id));
+
+        // remove single subscription
+        svc.remove_subscription(&sub_id);
+        assert!(svc.get_user_id(&sub_id).is_none());
+        assert!(svc.get_subscription_ids(user_id).is_empty());
+    }
+
+    #[test]
+    fn test_remove_user_subscriptions() {
+        let svc = SubscriptionService::new();
+        let user_id = 55u64;
+        let a = svc.create_subscription_id(user_id);
+        let b = svc.create_subscription_id(user_id);
+        assert_eq!(svc.get_subscription_ids(user_id).len(), 2);
+
+        svc.remove_user_subscriptions(user_id);
+        assert!(svc.get_subscription_ids(user_id).is_empty());
+        assert!(svc.get_user_id(&a).is_none());
+        assert!(svc.get_user_id(&b).is_none());
+    }
 }

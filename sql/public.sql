@@ -1,4 +1,37 @@
 --
+-- Table structure for table `subscriptions`
+--
+
+DROP TABLE IF EXISTS subscriptions;
+CREATE TABLE subscriptions (
+  id bigserial PRIMARY KEY,
+  subscription_id varchar(64) NOT NULL,
+  user_id bigint NOT NULL,
+  device_info varchar(255) DEFAULT NULL,
+  created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  expires_at timestamptz DEFAULT NULL
+);
+
+-- 创建索引
+CREATE UNIQUE INDEX subscriptions_subscription_id_idx ON subscriptions (subscription_id);
+CREATE INDEX idx_subscriptions_subscription_id ON subscriptions (subscription_id);
+CREATE INDEX idx_subscriptions_user_id ON subscriptions (user_id);
+CREATE INDEX idx_subscriptions_expires_at ON subscriptions (expires_at);
+
+-- 添加表注释
+COMMENT ON TABLE subscriptions IS '订阅表';
+
+-- 添加字段注释
+COMMENT ON COLUMN subscriptions.id IS '主键ID';
+COMMENT ON COLUMN subscriptions.subscription_id IS '订阅ID，格式：sub_{uuid}';
+COMMENT ON COLUMN subscriptions.user_id IS '用户ID';
+COMMENT ON COLUMN subscriptions.device_info IS '设备信息（可选）';
+COMMENT ON COLUMN subscriptions.created_at IS '创建时间';
+COMMENT ON COLUMN subscriptions.updated_at IS '更新时间';
+COMMENT ON COLUMN subscriptions.expires_at IS '过期时间（可选，用于自动清理）';
+
+--
 -- Table structure for table `im_friendship`
 --
 

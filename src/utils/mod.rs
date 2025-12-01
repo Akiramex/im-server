@@ -6,6 +6,8 @@ pub use redis::{RedisClient, RedisConfig, init_redis_client};
 
 pub mod snowflake;
 
+pub mod subcription;
+
 use std::time::{SystemTime, UNIX_EPOCH};
 /// 获取当前时间戳（毫秒）
 pub fn now_timestamp() -> i64 {
