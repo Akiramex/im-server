@@ -7,9 +7,9 @@ use ulid::Ulid;
 #[derive(Clone)]
 pub struct SubscriptionService {
     // 订阅 ID -> 用户 ID
-    subscriptions: Arc<DashMap<String, u64>>,
+    subscriptions: Arc<DashMap<String, i64>>,
     // 用户 ID -> 订阅 ID 列表（一个用户可以有多个设备）
-    user_subscriptions: Arc<DashMap<u64, Vec<String>>>,
+    user_subscriptions: Arc<DashMap<i64, Vec<String>>>,
 }
 
 impl SubscriptionService {
@@ -22,7 +22,7 @@ impl SubscriptionService {
 
     /// 为用户生成或获取订阅 ID
     /// 如果用户已有订阅 ID，返回现有的；否则生成新的
-    pub fn get_or_create_subscription_id(&self, user_id: u64) -> String {
+    pub fn get_or_create_subscription_id(&self, user_id: i64) -> String {
         // 如果用户已有订阅 ID，返回第一个
         if let Some(subs) = self.user_subscriptions.get(&user_id) {
             if !subs.is_empty() {
@@ -45,7 +45,7 @@ impl SubscriptionService {
     }
 
     /// 创建新的订阅 ID（允许多设备登录）
-    pub fn create_subscription_id(&self, user_id: u64) -> String {
+    pub fn create_subscription_id(&self, user_id: i64) -> String {
         let subscription_id = format!("sub_{}", Ulid::new().to_string());
 
         self.subscriptions.insert(subscription_id.clone(), user_id);
@@ -59,12 +59,12 @@ impl SubscriptionService {
     }
 
     /// 根据订阅 ID 获取用户 ID
-    pub fn get_user_id(&self, subscription_id: &str) -> Option<u64> {
+    pub fn get_user_id(&self, subscription_id: &str) -> Option<i64> {
         self.subscriptions.get(subscription_id).map(|v| *v.value())
     }
 
     /// 根据用户 ID 获取所有订阅 ID
-    pub fn get_subscription_ids(&self, user_id: u64) -> Vec<String> {
+    pub fn get_subscription_ids(&self, user_id: i64) -> Vec<String> {
         self.user_subscriptions
             .get(&user_id)
             .map(|v| v.value().clone())
@@ -87,7 +87,7 @@ impl SubscriptionService {
     }
 
     /// 删除用户的所有订阅
-    pub fn remove_user_subscriptions(&self, user_id: u64) {
+    pub fn remove_user_subscriptions(&self, user_id: i64) {
         if let Some((_k, subs)) = self.user_subscriptions.remove(&user_id) {
             for sub_id in subs {
                 self.subscriptions.remove(&sub_id);
@@ -96,7 +96,7 @@ impl SubscriptionService {
     }
 
     /// 手动添加订阅 ID（用于从数据库同步到内存）
-    pub fn add_subscription_id(&self, subscription_id: String, user_id: u64) {
+    pub fn add_subscription_id(&self, subscription_id: String, user_id: i64) {
         self.subscriptions.insert(subscription_id.clone(), user_id);
 
         let mut entry = self
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_create_and_get_subscription() {
         let svc = SubscriptionService::new();
-        let user_id = 42u64;
+        let user_id = 42;
 
         let sub_id = svc.create_subscription_id(user_id);
         assert!(sub_id.starts_with("sub_"));
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_get_or_create_returns_existing() {
         let svc = SubscriptionService::new();
-        let user_id = 100u64;
+        let user_id = 100;
         let first = svc.get_or_create_subscription_id(user_id);
         let second = svc.get_or_create_subscription_id(user_id);
         assert_eq!(first, second);
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn test_add_and_remove_subscription() {
         let svc = SubscriptionService::new();
-        let user_id = 7u64;
+        let user_id = 7;
         let sub_id = "sub_manual_1".to_string();
 
         svc.add_subscription_id(sub_id.clone(), user_id);
@@ -307,7 +307,7 @@ mod tests {
     #[test]
     fn test_remove_user_subscriptions() {
         let svc = SubscriptionService::new();
-        let user_id = 55u64;
+        let user_id = 55;
         let a = svc.create_subscription_id(user_id);
         let b = svc.create_subscription_id(user_id);
         assert_eq!(svc.get_subscription_ids(user_id).len(), 2);

@@ -7,6 +7,11 @@ use crate::{AppResult, db, utils};
 
 static USE_REDIS: bool = true;
 
+// Redis 缓存键生成函数
+fn cache_key_user_id(id: i64) -> String {
+    format!("user:id:{}", id)
+}
+
 fn cache_key_open_id(open_id: &str) -> String {
     format!("user:open_id:{}", open_id)
 }
@@ -33,6 +38,10 @@ async fn cache_user(user: &User) -> AppResult<()> {
 
     // 缓存用户信息，使用多个键
     let ttl = 3600u64; // 1小时
+    if let Err(e) = RedisClient::set_with_ttl(&cache_key_user_id(user.id), &user_json, ttl).await {
+        return Err(AppError::internal(format!("Failed to cache user: {}", e)));
+    }
+
     if let Err(e) =
         RedisClient::set_with_ttl(&cache_key_open_id(&user.open_id), &user_json, ttl).await
     {
@@ -234,6 +243,61 @@ pub async fn get_by_open_id(open_id: &str) -> AppResult<User> {
     }
 }
 
+pub async fn get_by_id(id: i64) -> AppResult<User> {
+    // 先从缓存获取
+    if let Some(user) = get_user_from_cache(&cache_key_user_id(id)).await {
+        return Ok(user);
+    }
+    let conn = db::pool();
+    // 先检查用户是否存在
+    let exists = sqlx::query_scalar!(
+        r#"
+            SELECT id FROM users WHERE id = $1
+            AND (status IS NULL OR status = 1)
+        "#,
+        id
+    )
+    .fetch_optional(conn)
+    .await
+    .map_err(|e| {
+        tracing::error!(user_id = %id, error = %e, "检查用户是否存在失败");
+        AppError::internal("检查用户是否存在失败")
+    })?;
+
+    if exists.is_none() {
+        tracing::warn!(user_id = %id, "用户不存在或状态异常");
+        return Err(AppError::not_found("用户不存在或状态异常"));
+    }
+
+    // 查询用户详细信息（不再查询 is_online 和 last_online_time，这些字段现在只存在 Redis 中）
+    let user = sqlx::query_as!(
+        User,
+        r#"
+            SELECT id, open_id, name, email, password_hash, file_name, abstract as abstract_field, phone, status, gender
+            FROM users WHERE id = $1 AND (status IS NULL OR status = 1)
+        "#,
+         id
+    )
+        .fetch_optional(conn)
+        .await
+        .map_err(|e| {
+            tracing::error!(user_id = %id, error = %e, "查询用户详细信息失败（get_by_id）");
+            AppError::internal("检查用户是否存在失败")
+        })?;
+
+    match user {
+        Some(u) => {
+            // 缓存用户信息
+            let _ = cache_user(&u).await;
+            Ok(u)
+        }
+        None => {
+            tracing::warn!(user_id = %id, "用户详细信息查询返回空结果");
+            Err(AppError::not_found("用户详细信息查询返回空结果"))
+        }
+    }
+}
+
 pub async fn update_user(
     open_id: &str,
     name: Option<String>,
@@ -370,6 +434,7 @@ async fn invaliddate_user_cache(user: &User) {
     }
 
     let mut keys = vec![
+        cache_key_user_id(user.id),
         cache_key_open_id(&user.open_id),
         cache_key_open_id(&user.name),
         cache_key_open_id(&user.email),

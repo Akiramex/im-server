@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
 use tokio::signal;
@@ -16,6 +18,8 @@ mod utils;
 
 pub use error::AppError;
 pub use models::MyResponse;
+
+use crate::utils::subcription::SubscriptionService;
 pub type AppResult<T> = Result<T, AppError>;
 pub type JsonResult<T> = Result<Json<T>, AppError>;
 pub fn json_ok<T>(data: T) -> JsonResult<T> {
@@ -41,6 +45,7 @@ async fn main() {
     let catcher = Catcher::default().hoop(hoops::catch_status_error);
     let service = Service::new(router)
         .catcher(catcher)
+        .hoop(affix_state::inject(Arc::new(SubscriptionService::new())))
         .hoop(Logger::new())
         .hoop(hoops::cors_hoop());
 

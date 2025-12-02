@@ -115,3 +115,10 @@ pub struct AddFriendRequest {
     pub add_source: Option<String>,
     pub message: Option<String>, // 好友验证信息
 }
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct SubscriptionInfoResp {
+    pub user_id: i64,
+    pub open_id: String,
+    pub subscription_id: String,
+}

@@ -18,6 +18,10 @@ pub fn create_router() -> Vec<Router> {
                 .push(Router::with_path("register").post(auth_api::register)),
         )
         .push(
+            Router::with_path("subscriptions/{subscription_id}/user")
+                .get(subcription_api::get_user_id_by_subscription),
+        )
+        .push(
             Router::with_path("users")
                 .hoop(auth_hoop)
                 .post(user_api::create_user)
