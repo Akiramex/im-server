@@ -1,4 +1,109 @@
 --
+-- Table structure for table im_group_message
+--
+
+DROP TABLE IF EXISTS im_group_message;
+CREATE TABLE im_group_message (
+  message_id varchar(512) NOT NULL,
+  group_id varchar(255) NOT NULL,
+  from_id varchar(20) NOT NULL,
+  message_body text NOT NULL,
+  message_time timestamptz NOT NULL,
+  message_content_type integer NOT NULL,
+  extra text DEFAULT NULL,
+  del_flag smallint NOT NULL,
+  sequence bigint DEFAULT NULL,
+  message_random varchar(255) DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  version bigint DEFAULT NULL,
+  reply_to varchar(255) DEFAULT NULL,
+  PRIMARY KEY (message_id)
+);
+
+-- 创建索引
+CREATE INDEX idx_group_msg_group ON im_group_message (group_id);
+CREATE INDEX idx_from_id ON im_group_message (from_id);
+CREATE INDEX idx_group_msg_sequence ON im_group_message (sequence);
+
+-- 添加表注释
+COMMENT ON TABLE im_group_message IS '群聊消息表';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_group_message.message_id IS '消息ID';
+COMMENT ON COLUMN im_group_message.group_id IS '群组ID';
+COMMENT ON COLUMN im_group_message.from_id IS '发送者用户ID';
+COMMENT ON COLUMN im_group_message.message_body IS '消息内容';
+COMMENT ON COLUMN im_group_message.message_time IS '发送时间';
+COMMENT ON COLUMN im_group_message.message_content_type IS '消息类型';
+COMMENT ON COLUMN im_group_message.extra IS '扩展字段';
+COMMENT ON COLUMN im_group_message.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_group_message.sequence IS '消息序列';
+COMMENT ON COLUMN im_group_message.message_random IS '随机标识';
+COMMENT ON COLUMN im_group_message.create_time IS '创建时间';
+COMMENT ON COLUMN im_group_message.update_time IS '更新时间';
+COMMENT ON COLUMN im_group_message.version IS '版本信息';
+COMMENT ON COLUMN im_group_message.reply_to IS '被引用的消息 ID';
+
+
+--
+-- Table structure for table im_single_message
+--
+
+DROP TABLE IF EXISTS im_single_message;
+CREATE TABLE im_single_message (
+  message_id varchar(512) NOT NULL,
+  from_id varchar(50) NOT NULL,
+  to_id varchar(50) NOT NULL,
+  message_body text NOT NULL,
+  message_time timestamptz NOT NULL,
+  message_content_type integer NOT NULL,
+  read_status integer NOT NULL,
+  extra text DEFAULT NULL,
+  del_flag smallint NOT NULL,
+  sequence bigint NOT NULL,
+  message_random varchar(255) DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  version bigint DEFAULT NULL,
+  reply_to varchar(255) DEFAULT NULL,
+  to_type text DEFAULT 'User',
+  file_url varchar(512) DEFAULT NULL,
+  file_name varchar(255) DEFAULT NULL,
+  file_type varchar(64) DEFAULT NULL,
+  PRIMARY KEY (message_id)
+);
+
+-- 创建索引
+CREATE INDEX idx_private_from ON im_single_message (from_id);
+CREATE INDEX idx_private_to ON im_single_message (to_id);
+CREATE INDEX idx_single_msg_sequence ON im_single_message (sequence);
+
+-- 添加表注释
+COMMENT ON TABLE im_single_message IS '单聊消息表';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_single_message.message_id IS '消息ID';
+COMMENT ON COLUMN im_single_message.from_id IS '发送者用户ID';
+COMMENT ON COLUMN im_single_message.to_id IS '接收者用户ID';
+COMMENT ON COLUMN im_single_message.message_body IS '消息内容';
+COMMENT ON COLUMN im_single_message.message_time IS '发送时间';
+COMMENT ON COLUMN im_single_message.message_content_type IS '消息类型';
+COMMENT ON COLUMN im_single_message.read_status IS '阅读状态（1已读）';
+COMMENT ON COLUMN im_single_message.extra IS '扩展字段';
+COMMENT ON COLUMN im_single_message.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_single_message.sequence IS '消息序列';
+COMMENT ON COLUMN im_single_message.message_random IS '随机标识';
+COMMENT ON COLUMN im_single_message.create_time IS '创建时间';
+COMMENT ON COLUMN im_single_message.update_time IS '更新时间';
+COMMENT ON COLUMN im_single_message.version IS '版本信息';
+COMMENT ON COLUMN im_single_message.reply_to IS '被引用的消息 ID';
+COMMENT ON COLUMN im_single_message.to_type IS '接收者类型：User=用户，Group=群组';
+COMMENT ON COLUMN im_single_message.file_url IS '文件URL';
+COMMENT ON COLUMN im_single_message.file_name IS '文件名';
+COMMENT ON COLUMN im_single_message.file_type IS '文件类型';
+
+--
 -- Table structure for table `subscriptions`
 --
 

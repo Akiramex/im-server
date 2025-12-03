@@ -122,3 +122,18 @@ pub struct SubscriptionInfoResp {
     pub open_id: String,
     pub subscription_id: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ImGroupMessageStatus {
+    pub group_id: String,
+    pub message_id: String,
+    pub to_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub read_status: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub create_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<i64>,
+}

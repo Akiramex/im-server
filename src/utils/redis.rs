@@ -150,4 +150,99 @@ impl RedisClient {
             .query_async(&mut conn)
             .await
     }
+
+    // ========== 群消息已读状态相关方法（使用 Redis Set） ==========
+
+    /// 标记群消息为已读
+    /// key: group:read:{group_id}:{message_id}
+    /// 使用 Set 存储已读用户的 open_id
+    pub async fn mark_group_message_read(
+        group_id: &str,
+        message_id: &str,
+        user_id: &str,
+    ) -> Result<(), redis::RedisError> {
+        let key = format!("group:read:{}:{}", group_id, message_id);
+        let mut conn = RedisClient::get_connection();
+        // Redis 的 `SADD` 命令是 Set Add 的缩写，用于向 Redis 集合（Set）中添加一个或多个成员。
+        let _: i64 = redis::cmd("SADD")
+            .arg(&key)
+            .arg(user_id)
+            .query_async(&mut conn)
+            .await?;
+        // 设置过期时间：30天
+        let _: i64 = redis::cmd("EXPIRE")
+            .arg(&key)
+            .arg(2592000u64) // 30 * 24 * 60 * 60
+            .query_async(&mut conn)
+            .await?;
+        Ok(())
+    }
+
+    /// 检查用户是否已读群消息
+    pub async fn is_group_message_read(
+        group_id: &str,
+        message_id: &str,
+        user_id: &str,
+    ) -> Result<bool, redis::RedisError> {
+        let key = format!("group:read:{}:{}", group_id, message_id);
+        let mut conn = RedisClient::get_connection();
+        // SISMEMBER：检查成员是否在集合中
+        let result: i64 = redis::cmd("SISMEMBER")
+            .arg(&key)
+            .arg(user_id)
+            .query_async(&mut conn)
+            .await?;
+        Ok(result > 0)
+    }
+
+    /// 获取群消息的已读用户列表
+    pub async fn get_group_message_read_users(
+        group_id: &str,
+        message_id: &str,
+    ) -> Result<Vec<String>, redis::RedisError> {
+        let key = format!("group:read:{}:{}", group_id, message_id);
+        let mut conn = RedisClient::get_connection();
+        // SMEMBERS：获取集合中的所有成员
+        let users: Vec<String> = redis::cmd("SMEMBERS")
+            .arg(&key)
+            .query_async(&mut conn)
+            .await?;
+        Ok(users)
+    }
+
+    /// 获取群消息的已读数量
+    pub async fn get_group_message_read_count(
+        group_id: &str,
+        message_id: &str,
+    ) -> Result<usize, redis::RedisError> {
+        let key = format!("group:read:{}:{}", group_id, message_id);
+        let mut conn = RedisClient::get_connection();
+        // SCARD：获取集合的成员数量
+        let count: i64 = redis::cmd("SCARD").arg(&key).query_async(&mut conn).await?;
+        Ok(count as usize)
+    }
+
+    /// 批量标记群消息为已读
+    pub async fn mark_group_messages_read(
+        group_id: &str,
+        message_ids: &[&str],
+        user_id: &str,
+    ) -> Result<(), redis::RedisError> {
+        let mut conn = RedisClient::get_connection();
+        for message_id in message_ids {
+            let key = format!("group:read:{}:{}", group_id, message_id);
+            let _: i64 = redis::cmd("SADD")
+                .arg(&key)
+                .arg(user_id)
+                .query_async(&mut conn)
+                .await?;
+            // 设置过期时间：30天
+            let _: i64 = redis::cmd("EXPIRE")
+                .arg(&key)
+                .arg(2592000u64)
+                .query_async(&mut conn)
+                .await?;
+        }
+        Ok(())
+    }
 }

@@ -1,6 +1,6 @@
 use crate::{AppError, AppResult, db, utils::now_timestamp};
 
-use crate::models::{im_friendship::ImFriendship, im_friendship::ImFriendshipRequest};
+use crate::models::{ImFriendship, ImFriendshipRequest};
 
 use time::OffsetDateTime;
 use tracing::{debug, error, info, warn};
