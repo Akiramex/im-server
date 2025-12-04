@@ -1,5 +1,6 @@
 use crate::api::*;
 use crate::hoops::auth_hoop;
+use crate::service::im_message_service;
 use salvo::prelude::*;
 
 pub fn root() -> Router {
@@ -86,6 +87,37 @@ pub fn create_router() -> Vec<Router> {
                         .push(
                             Router::with_path("{request_id}")
                                 .post(im_friendship_api::handle_friendship_request),
+                        ),
+                )
+                .push(
+                    Router::with_path("message")
+                        .hoop(auth_hoop)
+                        .push(
+                            Router::with_path("single")
+                                .get(im_message_api::get_single_message)
+                                .post(im_message_api::send_single_message)
+                                .push(
+                                    Router::with_path("{message_id}/read")
+                                        .post(im_message_api::mark_single_message_read),
+                                ),
+                        )
+                        .push(
+                            Router::with_path("group").push(
+                                Router::with_path("{group_id}")
+                                    .get(im_message_api::get_group_message)
+                                    .push(
+                                        Router::with_path("{message_id}/read")
+                                            .post(im_message_api::mark_group_message_read),
+                                    )
+                                    .push(
+                                        Router::with_path("{message_id}/status")
+                                            .get(im_message_api::get_group_message_status),
+                                    )
+                                    .push(
+                                        Router::with_path("status")
+                                            .get(im_message_api::get_user_group_message_status),
+                                    ),
+                            ),
                         ),
                 ),
         );
