@@ -312,3 +312,106 @@ COMMENT ON COLUMN users.created_at IS '创建时间';
 COMMENT ON COLUMN users.updated_at IS '更新时间';
 COMMENT ON COLUMN users.version IS '版本号';
 COMMENT ON COLUMN users.del_flag IS '删除标志：1=正常，0=删除';
+
+--
+-- Table structure for table im_group
+--
+
+DROP TABLE IF EXISTS im_group;
+CREATE TABLE im_group (
+  group_id varchar(50) NOT NULL,
+  owner_id varchar(50) NOT NULL,
+  group_type integer NOT NULL,
+  group_name varchar(100) NOT NULL,
+  mute smallint DEFAULT NULL,
+  apply_join_type integer NOT NULL,
+  avatar varchar(300) DEFAULT NULL,
+  max_member_count integer DEFAULT NULL,
+  introduction varchar(100) DEFAULT NULL,
+  notification varchar(1000) DEFAULT NULL,
+  status integer DEFAULT NULL,
+  sequence bigint DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  extra varchar(1000) DEFAULT NULL,
+  version bigint DEFAULT NULL,
+  del_flag smallint NOT NULL,
+  verifier smallint DEFAULT NULL,
+  PRIMARY KEY (group_id)
+);
+
+-- 创建索引
+CREATE INDEX idx_owner_id ON im_group (owner_id);
+CREATE INDEX idx_status ON im_group (status);
+
+-- 添加表注释
+COMMENT ON TABLE im_group IS '群组表';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_group.group_id IS '群组ID';
+COMMENT ON COLUMN im_group.owner_id IS '群主用户ID';
+COMMENT ON COLUMN im_group.group_type IS '群类型（1私有群，2公开群）';
+COMMENT ON COLUMN im_group.group_name IS '群名称';
+COMMENT ON COLUMN im_group.mute IS '是否全员禁言（1不禁言，0禁言）';
+COMMENT ON COLUMN im_group.apply_join_type IS '申请加群方式（0禁止申请，1需要审批，2允许自由加入）';
+COMMENT ON COLUMN im_group.avatar IS '群头像';
+COMMENT ON COLUMN im_group.max_member_count IS '最大成员数';
+COMMENT ON COLUMN im_group.introduction IS '群简介';
+COMMENT ON COLUMN im_group.notification IS '群公告';
+COMMENT ON COLUMN im_group.status IS '群状态（1正常，0解散）';
+COMMENT ON COLUMN im_group.sequence IS '消息序列号';
+COMMENT ON COLUMN im_group.create_time IS '创建时间';
+COMMENT ON COLUMN im_group.update_time IS '更新时间';
+COMMENT ON COLUMN im_group.extra IS '扩展字段';
+COMMENT ON COLUMN im_group.version IS '版本信息';
+COMMENT ON COLUMN im_group.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_group.verifier IS '开启群验证（1验证，0不验证）';
+
+--
+-- Table structure for table im_group_member
+--
+
+DROP TABLE IF EXISTS im_group_member;
+CREATE TABLE im_group_member (
+  group_member_id varchar(100) NOT NULL,
+  group_id varchar(50) NOT NULL,
+  member_id varchar(50) NOT NULL,
+  role integer NOT NULL,
+  speak_date timestamptz DEFAULT NULL,
+  mute smallint NOT NULL,
+  alias varchar(100) DEFAULT NULL,
+  join_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  leave_time timestamptz DEFAULT NULL,
+  join_type varchar(50) DEFAULT NULL,
+  extra varchar(1000) DEFAULT NULL,
+  del_flag smallint NOT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  version bigint DEFAULT NULL,
+  PRIMARY KEY (group_member_id)
+);
+
+-- 创建索引
+CREATE INDEX idx_group_id ON im_group_member (group_id);
+CREATE INDEX idx_igm_member_group ON im_group_member (member_id, group_id);
+CREATE INDEX idx_member_id ON im_group_member (member_id);
+
+-- 添加表注释
+COMMENT ON TABLE im_group_member IS '群组成员表';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_group_member.group_member_id IS '群组成员ID';
+COMMENT ON COLUMN im_group_member.group_id IS '群组ID';
+COMMENT ON COLUMN im_group_member.member_id IS '成员用户ID';
+COMMENT ON COLUMN im_group_member.role IS '群成员角色（0普通成员，1管理员，2群主）';
+COMMENT ON COLUMN im_group_member.speak_date IS '最后发言时间';
+COMMENT ON COLUMN im_group_member.mute IS '是否禁言（1不禁言，0禁言）';
+COMMENT ON COLUMN im_group_member.alias IS '群昵称';
+COMMENT ON COLUMN im_group_member.join_time IS '加入时间';
+COMMENT ON COLUMN im_group_member.leave_time IS '离开时间';
+COMMENT ON COLUMN im_group_member.join_type IS '加入类型';
+COMMENT ON COLUMN im_group_member.extra IS '扩展字段';
+COMMENT ON COLUMN im_group_member.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_group_member.create_time IS '创建时间';
+COMMENT ON COLUMN im_group_member.update_time IS '更新时间';
+COMMENT ON COLUMN im_group_member.version IS '版本信息';
