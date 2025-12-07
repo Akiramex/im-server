@@ -1,8 +1,9 @@
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ImGroup {
     pub group_id: String,
     pub owner_id: String,
@@ -74,7 +75,7 @@ impl ImGroup {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ImGroupMember {
     pub group_member_id: String,
     pub group_id: String,

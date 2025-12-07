@@ -1,9 +1,8 @@
-use crate::{AppError, AppResult, db, utils::now_timestamp};
+use crate::{db, prelude::*, utils::now_timestamp};
 
 use crate::models::{ImFriendship, ImFriendshipRequest};
 
 use time::OffsetDateTime;
-use tracing::{debug, error, info, warn};
 
 pub async fn is_friend(owner_id: &str, to_id: &str) -> AppResult<bool> {
     let conn = db::pool();

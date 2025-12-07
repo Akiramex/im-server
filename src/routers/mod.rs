@@ -1,6 +1,5 @@
 use crate::api::*;
 use crate::hoops::auth_hoop;
-use crate::service::im_message_service;
 use salvo::prelude::*;
 
 pub fn root() -> Router {
@@ -76,6 +75,41 @@ pub fn create_router() -> Vec<Router> {
                                 .push(
                                     Router::with_path("black")
                                         .post(im_friendship_api::black_friend),
+                                ),
+                        ),
+                )
+                .push(
+                    Router::with_path("groups")
+                        .hoop(auth_hoop)
+                        .get(im_group_api::get_user_groups)
+                        .post(im_group_api::create_group)
+                        .push(
+                            Router::with_path("{group_id}")
+                                .get(im_group_api::get_group)
+                                .put(im_group_api::update_group)
+                                .push(
+                                    Router::with_path("members")
+                                        .get(im_group_api::get_group_members)
+                                        .push(
+                                            Router::with_path("{member_id}")
+                                                .post(im_group_api::add_group_member)
+                                                .delete(im_group_api::remove_group_member)
+                                                .push(
+                                                    Router::with_path("role")
+                                                        .put(im_group_api::update_member_role),
+                                                )
+                                                .push(
+                                                    Router::with_path("alias")
+                                                        .put(im_group_api::update_member_alias),
+                                                ),
+                                        ),
+                                )
+                                .push(
+                                    Router::with_path("dissolve")
+                                        .delete(im_group_api::dissolve_group),
+                                )
+                                .push(
+                                    Router::with_path("delete").delete(im_group_api::delete_group),
                                 ),
                         ),
                 )

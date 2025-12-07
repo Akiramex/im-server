@@ -1,7 +1,7 @@
 use crate::{
-    AppError, JsonResult, MyResponse, json_ok,
     models::SafeUser,
     models::User,
+    prelude::*,
     service::{friend_service, user_service},
 };
 use salvo::{oapi::extract::PathParam, prelude::*};

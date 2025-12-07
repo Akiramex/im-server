@@ -1,12 +1,10 @@
 use crate::dto::{CreateUserReq, UpdateUserReq, UserListQuery, UserListResp};
-use crate::json_ok;
 use crate::models::SafeUser;
+use crate::models::User;
+use crate::prelude::*;
 use crate::service::user_service;
-use crate::{AppError, MyResponse};
-use crate::{JsonResult, models::User};
 use salvo::oapi::extract::{JsonBody, PathParam};
 use salvo::prelude::*;
-use tracing::{error, info, warn};
 
 /// 分页查询user
 #[endpoint(tags("user"))]

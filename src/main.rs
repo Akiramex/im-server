@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use crate::prelude::*;
+use crate::utils::subcription::SubscriptionService;
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
 use tokio::signal;
-use tracing::info;
 
 mod api;
 mod config;
@@ -12,19 +13,10 @@ mod dto;
 mod error;
 mod hoops;
 mod models;
+mod prelude;
 mod routers;
 mod service;
 mod utils;
-
-pub use error::AppError;
-pub use models::MyResponse;
-
-use crate::utils::subcription::SubscriptionService;
-pub type AppResult<T> = Result<T, AppError>;
-pub type JsonResult<T> = Result<Json<T>, AppError>;
-pub fn json_ok<T>(data: T) -> JsonResult<T> {
-    Ok(Json(data))
-}
 
 #[tokio::main]
 async fn main() {

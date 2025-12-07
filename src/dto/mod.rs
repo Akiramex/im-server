@@ -137,3 +137,44 @@ pub struct ImGroupMessageStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<i64>,
 }
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct UpdateGroupRequest {
+    pub group_name: Option<String>,
+    pub introduction: Option<String>,
+    pub avatar: Option<String>,
+    pub notification: Option<String>,
+    pub apply_join_type: Option<i32>,
+    pub max_member_count: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct UpdateMemberAliasRequest {
+    pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct UpdateMemberRoleRequest {
+    pub role: i32, // 0=普通成员，1=管理员，2=群主
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct AddGroupMemberRequest {
+    #[allow(dead_code)]
+    pub member_id: String,
+    pub role: Option<i32>,
+    pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CreateGroupRequest {
+    pub group_id: String,
+    pub group_name: String,
+    pub group_type: i32,
+    pub apply_join_type: i32,
+    pub avatar: Option<String>,
+    pub max_member_count: Option<i32>,
+    pub introduction: Option<String>,
+    pub notification: Option<String>,
+    pub verifier: Option<i16>,
+}

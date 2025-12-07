@@ -1,11 +1,11 @@
+use crate::db;
 use crate::dto::SubscriptionInfoResp;
+use crate::prelude::*;
 use crate::service::user_service;
-use crate::{AppError, JsonResult, utils::subcription::SubscriptionService};
-use crate::{MyResponse, db, json_ok};
+use crate::utils::subcription::SubscriptionService;
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 use std::sync::Arc;
-use tracing::{error, info, warn};
 
 /// 根据订阅 ID 获取用户 ID（返回 open_id 的数字形式用于MQTT）
 #[endpoint(tags("subscription"))]

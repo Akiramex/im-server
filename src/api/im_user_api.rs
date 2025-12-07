@@ -3,11 +3,8 @@ use salvo::{
     prelude::*,
 };
 
-use crate::{
-    JsonResult, MyResponse, dto::LoginResp, json_ok, models::im_user::ImSafeUser,
-    service::im_user_service,
-};
 use crate::{dto::CreateImUserReq, dto::LoginReq, models::ImUserData};
+use crate::{dto::LoginResp, models::im_user::ImSafeUser, prelude::*, service::im_user_service};
 
 /// 创建 im_user
 #[endpoint(tags("im_user"))]

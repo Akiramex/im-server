@@ -9,8 +9,7 @@ use crate::dto::{
 use crate::models::User;
 use crate::models::im_friendship::ImFriendshipRequest;
 use crate::service::{im_friendship_service, user_service};
-use crate::{AppError, JsonResult, MyResponse, json_ok, utils};
-use tracing::{error, info, warn};
+use crate::{prelude::*, utils};
 
 /// 根据open_id获取好友列表
 ///

@@ -1,9 +1,9 @@
-use crate::AppError;
 use crate::dto::UserListResp;
 use crate::models::{SafeUser, User};
+use crate::prelude::*;
 use crate::utils::RedisClient;
 use crate::utils::snowflake::generate_snowflake_id;
-use crate::{AppResult, db, utils};
+use crate::{db, utils};
 
 static USE_REDIS: bool = true;
 

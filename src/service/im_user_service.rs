@@ -1,11 +1,9 @@
 use time::OffsetDateTime;
 
-use crate::models::ImUserData;
-use crate::models::im_user::ImSafeUser;
+use crate::db;
+use crate::models::{ImSafeUser, ImUser, ImUserData};
+use crate::prelude::*;
 use crate::utils::{self, RedisClient};
-use crate::{AppError, models::ImUser};
-use crate::{AppResult, db};
-
 static USE_REDIS: bool = true;
 
 fn cache_key_user_id(user_id: &str) -> String {

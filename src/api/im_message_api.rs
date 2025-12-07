@@ -1,8 +1,12 @@
-use salvo::prelude::*;
+use salvo::{
+    oapi::extract::{PathParam, QueryParam},
+    prelude::*,
+};
 
 use crate::{
-    AppError, JsonResult, MyResponse, SubscriptionService, db, json_ok,
+    SubscriptionService, db,
     models::{ChatMessage, ImSingleMessage, User},
+    prelude::*,
     service::{im_message_service, user_service},
 };
 use salvo::{
@@ -25,6 +29,7 @@ pub struct SendSingleMessageRequest {
     pub reply_to: Option<String>,
 }
 
+/// 发送单聊信息
 #[endpoint(tags("im_message"))]
 pub async fn send_single_message(
     req: JsonBody<SendSingleMessageRequest>,
@@ -32,10 +37,10 @@ pub async fn send_single_message(
 ) -> JsonResult<MyResponse<()>> {
     if let Ok(user) = depot.obtain::<User>() {
         let req = req.into_inner();
+        let conn = db::pool();
         let subscription_service = depot
             .obtain::<Arc<SubscriptionService>>()
             .map_err(|_| AppError::internal("SubscriptionService not found"))?;
-        let conn = db::pool();
 
         // 验证请求参数
         if req.from_id.is_empty() || req.to_id.is_empty() {
@@ -206,26 +211,82 @@ pub async fn send_single_message(
     }
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct SingleMessageParams {
+    pub to_id: String,
+    pub since_sequence: Option<i64>,
+    pub limit: i32,
+}
+
+/// 获取单聊信息
 #[endpoint(tags("im_message"))]
-pub async fn get_single_message() -> JsonResult<()> {
-    todo!()
+pub async fn get_single_message(
+    depot: &mut Depot,
+    params: QueryParam<SingleMessageParams, true>,
+) -> JsonResult<MyResponse<Vec<ImSingleMessage>>> {
+    if let Ok(user) = depot.obtain::<User>() {
+        let req = params.into_inner();
+
+        match im_message_service::get_single_messages(
+            &user.open_id,
+            &req.to_id,
+            req.since_sequence,
+            req.limit,
+        )
+        .await
+        {
+            Ok(message) => json_ok(MyResponse::success_with_data("Ok", message)),
+            Err(e) => Err(AppError::internal(format!("获取消息失败: {:?}", e))),
+        }
+    } else {
+        Err(AppError::unauthorized("用户未登录"))
+    }
 }
 
 #[endpoint(tags("im_message"))]
-pub async fn mark_single_message_read() -> JsonResult<()> {
-    todo!()
+pub async fn mark_single_message_read(
+    depot: &mut Depot,
+    message_id: PathParam<String>,
+) -> JsonResult<MyResponse<()>> {
+    if let Ok(user) = depot.obtain::<User>() {
+        let req = message_id.into_inner();
+        match im_message_service::mark_single_message_read(&req, &user.open_id).await {
+            Ok(_) => json_ok(MyResponse::success_with_msg("Ok")),
+            Err(e) => Err(AppError::internal(format!("标记消息已读失败: {:?}", e))),
+        }
+    } else {
+        Err(AppError::unauthorized("用户未登录"))
+    }
 }
 
+/// 发送群聊信息
 #[endpoint(tags("im_message"))]
 pub async fn send_group_message() -> JsonResult<()> {
     todo!()
 }
 
-#[endpoint(tags("im_message"))]
-pub async fn get_group_message() -> JsonResult<()> {
-    todo!()
+#[derive(Deserialize, ToSchema)]
+pub struct GroupMessageParams {
+    pub since_sequence: Option<i64>,
+    pub limit: i32,
 }
 
+/// 获取群聊信息
+#[endpoint(tags("im_message"))]
+pub async fn get_group_message(
+    depot: &mut Depot,
+    group_id: PathParam<String>,
+    params: QueryParam<GroupMessageParams, true>,
+) -> JsonResult<()> {
+    if let Ok(user) = depot.obtain::<User>() {
+        let req = group_id.into_inner();
+        todo!()
+    } else {
+        Err(AppError::unauthorized("用户未登录"))
+    }
+}
+
+/// 标记群聊信息已读
 #[endpoint(tags("im_message"))]
 pub async fn mark_group_message_read() -> JsonResult<()> {
     todo!()

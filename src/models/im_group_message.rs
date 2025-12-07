@@ -18,8 +18,7 @@ pub struct ImGroupMessage {
     pub sequence: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_random: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub create_time: Option<OffsetDateTime>,
+    pub create_time: OffsetDateTime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub update_time: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,7 +39,7 @@ impl ImGroupMessage {
         del_flag: i16,
         sequence: Option<i64>,
         message_random: Option<String>,
-        create_time: Option<OffsetDateTime>,
+        create_time: OffsetDateTime,
         update_time: Option<OffsetDateTime>,
         version: Option<i64>,
         reply_to: Option<String>,
