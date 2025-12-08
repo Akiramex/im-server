@@ -153,6 +153,22 @@ pub fn create_router() -> Vec<Router> {
                                     ),
                             ),
                         ),
+                )
+                .push(
+                    Router::with_path("outbox")
+                        .hoop(auth_hoop)
+                        .post(im_outbox_api::create_outbox)
+                        .push(Router::with_path("pending").get(im_outbox_api::get_pending_messages))
+                        .push(Router::with_path("failed").get(im_outbox_api::get_failed_messages))
+                        .push(
+                            Router::with_path("{id}")
+                                .get(im_outbox_api::get_outbox)
+                                .push(
+                                    Router::with_path("status")
+                                        .put(im_outbox_api::update_outbox_status),
+                                )
+                                .push(Router::with_path("sent").put(im_outbox_api::mark_sent)),
+                        ),
                 ),
         );
 

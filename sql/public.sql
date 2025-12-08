@@ -415,3 +415,43 @@ COMMENT ON COLUMN im_group_member.del_flag IS '删除标识（1正常，0删除�
 COMMENT ON COLUMN im_group_member.create_time IS '创建时间';
 COMMENT ON COLUMN im_group_member.update_time IS '更新时间';
 COMMENT ON COLUMN im_group_member.version IS '版本信息';
+
+--
+-- Table structure for table im_outbox
+--
+
+DROP TABLE IF EXISTS im_outbox;
+CREATE TABLE im_outbox (
+  id bigserial NOT NULL,
+  message_id varchar(64) NOT NULL,
+  payload text NOT NULL,
+  exchange varchar(128) NOT NULL,
+  routing_key varchar(128) NOT NULL,
+  attempts integer NOT NULL DEFAULT 0,
+  status varchar(20) NOT NULL DEFAULT 'PENDING',
+  last_error text DEFAULT NULL,
+  created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  next_try_at timestamptz DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- 创建索引
+CREATE INDEX idx_outbox_message_id ON im_outbox (message_id);
+CREATE INDEX idx_outbox_status ON im_outbox (status);
+
+-- 添加表注释
+COMMENT ON TABLE im_outbox IS 'Outbox table: 持久化要投递到 MQ 的消息，支持重试/幂等/确认回写';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_outbox.id IS '主键';
+COMMENT ON COLUMN im_outbox.message_id IS '业务消息 ID（用于回溯/去重/关联业务数据）';
+COMMENT ON COLUMN im_outbox.payload IS '要发送的 JSON 负载（建议尽量轻量：可仅包含 messageId + 必要路由信息）';
+COMMENT ON COLUMN im_outbox.exchange IS '目标交换机名称';
+COMMENT ON COLUMN im_outbox.routing_key IS '目标路由键（或 queue 名称）';
+COMMENT ON COLUMN im_outbox.attempts IS '累积投递次数';
+COMMENT ON COLUMN im_outbox.status IS '投递状态：PENDING(待投递) / SENT(已确认) / FAILED(失败，需要人工介入) / DLX(死信)';
+COMMENT ON COLUMN im_outbox.last_error IS '投递失败时的错误信息';
+COMMENT ON COLUMN im_outbox.created_at IS '创建时间';
+COMMENT ON COLUMN im_outbox.updated_at IS '更新时间';
+COMMENT ON COLUMN im_outbox.next_try_at IS '下一次重试时间（用以调度延迟重试）';

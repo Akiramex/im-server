@@ -178,3 +178,27 @@ pub struct CreateGroupRequest {
     pub notification: Option<String>,
     pub verifier: Option<i16>,
 }
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CreateOutboxRequest {
+    pub message_id: String,
+    pub payload: String,
+    pub exchange: String,
+    pub routing_key: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct UpdateOutboxStatusRequest {
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct SetNextTryRequest {
+    #[allow(dead_code)]
+    pub next_try_at: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct OutboxParams {
+    pub limit: i64,
+}

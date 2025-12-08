@@ -21,3 +21,6 @@ pub use user::{SafeUser, User};
 
 pub mod im_group;
 pub use im_group::{ImGroup, ImGroupMember};
+
+pub mod im_outbox;
+pub use im_outbox::ImOutbox;
