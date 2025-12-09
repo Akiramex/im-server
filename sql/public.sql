@@ -455,3 +455,46 @@ COMMENT ON COLUMN im_outbox.last_error IS '投递失败时的错误信息';
 COMMENT ON COLUMN im_outbox.created_at IS '创建时间';
 COMMENT ON COLUMN im_outbox.updated_at IS '更新时间';
 COMMENT ON COLUMN im_outbox.next_try_at IS '下一次重试时间（用以调度延迟重试）';
+
+--
+-- Table structure for table im_chat
+--
+
+DROP TABLE IF EXISTS im_chat;
+CREATE TABLE im_chat (
+  chat_id varchar(255) NOT NULL,
+  chat_type integer NOT NULL,
+  owner_id varchar(50) NOT NULL,
+  to_id varchar(50) NOT NULL,
+  is_mute smallint NOT NULL,
+  is_top smallint NOT NULL,
+  sequence bigint DEFAULT NULL,
+  read_sequence bigint DEFAULT NULL,
+  remark varchar(200) DEFAULT NULL,
+  create_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamptz DEFAULT CURRENT_TIMESTAMP,
+  del_flag smallint DEFAULT NULL,
+  version bigint DEFAULT NULL,
+  PRIMARY KEY (chat_id, owner_id)
+);
+
+-- 创建索引
+CREATE INDEX idx_chat_owner_to ON im_chat (owner_id, to_id);
+
+-- 添加表注释
+COMMENT ON TABLE im_chat IS '聊天会话表';
+
+-- 添加字段注释
+COMMENT ON COLUMN im_chat.chat_id IS '聊天ID';
+COMMENT ON COLUMN im_chat.chat_type IS '聊天类型：0单聊，1群聊，2机器人，3公众号';
+COMMENT ON COLUMN im_chat.owner_id IS '所有者用户ID';
+COMMENT ON COLUMN im_chat.to_id IS '对方用户ID或群组ID';
+COMMENT ON COLUMN im_chat.is_mute IS '是否免打扰（1免打扰）';
+COMMENT ON COLUMN im_chat.is_top IS '是否置顶（1置顶）';
+COMMENT ON COLUMN im_chat.sequence IS '消息序列号';
+COMMENT ON COLUMN im_chat.read_sequence IS '已读消息序列';
+COMMENT ON COLUMN im_chat.remark IS '群聊备注，仅自己可见';
+COMMENT ON COLUMN im_chat.create_time IS '创建时间';
+COMMENT ON COLUMN im_chat.update_time IS '更新时间';
+COMMENT ON COLUMN im_chat.del_flag IS '删除标识（1正常，0删除）';
+COMMENT ON COLUMN im_chat.version IS '版本信息';

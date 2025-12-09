@@ -24,3 +24,6 @@ pub use im_group::{ImGroup, ImGroupMember};
 
 pub mod im_outbox;
 pub use im_outbox::ImOutbox;
+
+pub mod im_chat;
+pub use im_chat::{ChatWithName, ImChat};
