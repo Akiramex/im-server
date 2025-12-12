@@ -1,8 +1,9 @@
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ImChat {
     pub chat_id: String,
     pub chat_type: i32,
@@ -28,7 +29,7 @@ pub struct ImChat {
 }
 
 /// 聊天信息，包含关联的名称信息（群组名称或用户名）
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatWithName {
     pub chat_id: String,
     pub chat_type: i32,

@@ -1,5 +1,6 @@
 pub mod auth_api;
 pub mod friend_api;
+pub mod im_chat_api;
 pub mod im_friendship_api;
 pub mod im_group_api;
 pub mod im_message_api;

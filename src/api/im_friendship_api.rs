@@ -14,7 +14,7 @@ use crate::{prelude::*, utils};
 /// 根据open_id获取好友列表
 ///
 /// 不需要登录
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn get_friends_by_open_id(
     open_id: PathParam<String>,
 ) -> JsonResult<MyResponse<Vec<SimpleFriendshipResp>>> {
@@ -31,7 +31,7 @@ pub async fn get_friends_by_open_id(
 }
 
 /// 获取好友列表
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn get_friends(depot: &mut Depot) -> JsonResult<MyResponse<Vec<GetFriendsResp>>> {
     if let Ok(from_user) = depot.obtain::<User>() {
         let owner_id = from_user.open_id.clone();
@@ -70,7 +70,7 @@ pub async fn get_friends(depot: &mut Depot) -> JsonResult<MyResponse<Vec<GetFrie
 }
 
 /// 添加好友
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn add_friend(
     depot: &mut Depot,
     req: JsonBody<AddFriendRequest>,
@@ -205,7 +205,7 @@ pub async fn add_friend(
 }
 
 /// 删除好友
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn remove_friend(
     depot: &mut Depot,
     to_id: PathParam<String>,
@@ -261,7 +261,7 @@ pub async fn remove_friend(
 }
 
 /// 更新备注
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn update_remark(
     depot: &mut Depot,
     to_id: PathParam<String>,
@@ -280,7 +280,7 @@ pub async fn update_remark(
 }
 
 /// 切换拉黑状态
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn black_friend(
     depot: &mut Depot,
     to_id: PathParam<String>,
@@ -297,7 +297,7 @@ pub async fn black_friend(
 }
 
 /// 创建好友申请
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn create_friendship_request(
     req: JsonBody<ImFriendshipRequest>,
 ) -> JsonResult<MyResponse<()>> {
@@ -310,7 +310,7 @@ pub async fn create_friendship_request(
 }
 
 /// 获取好友申请
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn get_friendship_requests(
     query: QueryParam<GetFriendshipRequests, false>,
     depot: &mut Depot,
@@ -392,7 +392,7 @@ pub async fn get_friendship_requests(
 /// 处理好友申请
 ///
 /// 1：同意 2：拒绝
-#[endpoint[tags("im_friendship")]]
+#[endpoint(tags("im_friendship"))]
 pub async fn handle_friendship_request(
     request_id: PathParam<String>,
     req: JsonBody<HandleFriendshipRequests>,

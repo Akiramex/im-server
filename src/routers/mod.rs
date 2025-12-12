@@ -169,6 +169,26 @@ pub fn create_router() -> Vec<Router> {
                                 )
                                 .push(Router::with_path("sent").put(im_outbox_api::mark_sent)),
                         ),
+                )
+                .push(
+                    Router::with_path("chats")
+                        .head(auth_hoop)
+                        .get(im_chat_api::get_user_chats)
+                        .post(im_chat_api::get_or_create_chat)
+                        .push(Router::with_path("unread-stats").get(im_chat_api::get_unread_stats))
+                        .push(
+                            Router::with_path("{chat_id}")
+                                .put(im_chat_api::update_chat)
+                                .delete(im_chat_api::delete_chat),
+                        )
+                        .push(
+                            Router::with_path("{chat_id}/remark")
+                                .put(im_chat_api::update_chat_remark),
+                        )
+                        .push(
+                            Router::with_path("{chat_id}/read-sequence")
+                                .put(im_chat_api::update_read_sequence),
+                        ),
                 ),
         );
 
