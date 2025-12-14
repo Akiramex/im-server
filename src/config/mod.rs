@@ -1,6 +1,7 @@
 mod db_config;
 mod jwt_config;
 mod log_config;
+mod upload_config;
 
 use crate::utils::RedisConfig;
 use figment::Figment;
@@ -11,6 +12,7 @@ use std::sync::OnceLock;
 pub use db_config::DbConfig;
 pub use jwt_config::JwtConfig;
 pub use log_config::LogConfig;
+pub use upload_config::UploadConfig;
 
 pub static CONFIG: OnceLock<ServerConfig> = OnceLock::new();
 
@@ -39,6 +41,7 @@ pub struct ServerConfig {
     pub db: DbConfig,
     pub jwt: JwtConfig,
     pub redis: RedisConfig,
+    pub upload: UploadConfig,
 }
 
 pub fn default_true() -> bool {

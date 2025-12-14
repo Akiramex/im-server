@@ -12,6 +12,7 @@ pub fn root() -> Router {
 
 pub fn create_router() -> Vec<Router> {
     let v1 = Router::with_path("api/v1")
+        .push(Router::with_path("upload").post(upload_api::test_upload_file))
         .push(
             Router::with_path("auth")
                 .push(Router::with_path("login").post(auth_api::post_login))
@@ -20,6 +21,11 @@ pub fn create_router() -> Vec<Router> {
         .push(
             Router::with_path("subscriptions/{subscription_id}/user")
                 .get(subcription_api::get_user_id_by_subscription),
+        )
+        .push(
+            Router::with_path("messages")
+                .get(message_api::get_messages)
+                .post(message_api::send_message),
         )
         .push(
             Router::with_path("users")

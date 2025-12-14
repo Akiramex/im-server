@@ -4,8 +4,7 @@ use crate::{
     json_ok,
     models::SafeUser,
     prelude::*,
-    service::user_service,
-    utils::{self},
+    service::{auth_service, user_service},
 };
 use salvo::{http::cookie::Cookie, oapi::extract::JsonBody, prelude::*};
 use tracing::error;
@@ -30,7 +29,7 @@ pub async fn post_login(
         AppError::public("open id not exist")
     })?;
 
-    let token = utils::get_token(open_id_number, &config::get().jwt)?;
+    let token = auth_service::get_token(open_id_number, &config::get().jwt)?;
 
     let odata = LoginResp { token };
 

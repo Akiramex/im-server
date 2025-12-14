@@ -3,7 +3,7 @@ use salvo::prelude::*;
 use tracing::warn;
 
 use crate::config;
-use crate::utils::auth::verify_token;
+use crate::service::auth_service::verify_token;
 use crate::{AppError, service};
 
 #[handler]

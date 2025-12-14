@@ -1,4 +1,6 @@
+use std::process::exit;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::prelude::*;
 use crate::utils::subcription::SubscriptionService;
@@ -25,10 +27,23 @@ async fn main() {
     let _guard = config.log.guard();
 
     crate::db::init(&config.db).await;
-    crate::utils::init_redis_client(&config.redis)
-        .await
-        .map_err(|e| format!("redis init error: {}", e))
-        .unwrap();
+
+    match tokio::time::timeout(
+        Duration::from_secs(5),
+        crate::utils::init_redis_client(&config.redis),
+    )
+    .await
+    {
+        Ok(result) => {
+            result
+                .map_err(|e| format!("redis init error: {}", e))
+                .unwrap();
+        }
+        Err(e) => {
+            error!("Redis 链接超时，server启动失败: {:?}", e);
+            exit(1);
+        }
+    }
 
     let router = crate::routers::root();
     info!("{config:#?}");

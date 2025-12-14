@@ -6,5 +6,7 @@ pub mod im_group_api;
 pub mod im_message_api;
 pub mod im_outbox_api;
 pub mod im_user_api;
+pub mod message_api;
 pub mod subcription_api;
+pub mod upload_api;
 pub mod user_api;
