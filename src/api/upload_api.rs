@@ -1,9 +1,12 @@
 use crate::dto::UploadResp;
 use crate::prelude::*;
+use crate::service::{im_friendship_service, im_group_service};
 use crate::{config::UploadConfig, models::User};
 use image::EncodableLayout;
 use image::{ImageFormat, imageops::FilterType};
+use salvo::fs::NamedFile;
 use salvo::http::mime;
+use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 use std::{io::Cursor, path::PathBuf};
 use ulid::Ulid;
@@ -128,6 +131,7 @@ async fn process_image(
 }
 
 /// 上传文件
+#[endpoint(tags("upload"))]
 pub async fn upload_file(
     req: &mut Request,
     depot: &mut Depot,
@@ -258,57 +262,120 @@ pub async fn upload_file(
     }
 }
 
-#[handler]
-pub async fn test_upload_file(req: &mut Request, depot: &mut Depot) -> JsonResult<MyResponse<()>> {
-    let upload_config = crate::config::get().upload.clone();
-    let open_id = "12345-Akira-54321".to_string();
-    // 确保用户的上传目录存在
-    let user_upload_dir = PathBuf::from(&upload_config.path).join(&open_id);
-    if let Err(e) = init_upload_dir(user_upload_dir.to_str().unwrap()) {
-        error!(error = %e, open_id = %open_id, "创建用户上传目录失败");
-        return Err(AppError::internal("创建用户上传目录失败"));
-    }
+/// 下载文件
+// 路由使用 /download/{open_id}/{file_name}
+#[endpoint(tags("upload"))]
+pub async fn get_file(req: &mut Request, resp: &mut Response, depot: &mut Depot) -> AppResult<()> {
+    if let Ok(from_user) = depot.obtain::<User>() {
+        let upload_config = crate::config::get().upload.clone();
+        let current_open_id = from_user.open_id.clone();
+        let req_open_id = req.params().get("open_id").cloned().unwrap_or_default();
+        let req_file_name = req.params().get("file_name").cloned().unwrap_or_default();
 
-    while let Some(file) = req.file("file").await {
-        let file_name = file.name().unwrap_or("unknown").to_string();
-        let content_type = file
-            .content_type()
-            .unwrap_or(mime::TEXT_PLAIN_UTF_8)
-            .to_string();
+        // 安全检查：防止路径遍历攻击
+        let file_owner_open_id = req_open_id.replace("..", "").replace("\\", "");
+        let file_name = req_file_name.replace("..", "").replace("\\", "");
 
-        let file_data = tokio::fs::read(file.path()).await.map_err(|e| {
-            error!(error = %e, open_id = %open_id, "读取文件失败");
-            AppError::internal("读取文件失败")
-        })?;
+        info!(
+            open_id = %current_open_id,
+            req_open_id = %req_open_id,
+            req_file_name = %req_file_name,
+            "下载文件"
+        );
 
-        let unique_file_name = format!("{}.{}", Ulid::new().to_string(), "jpg");
-        let upload_dir = PathBuf::from(&upload_config.path);
+        if file_name.is_empty() {
+            return Err(AppError::public("无效的文件路径"));
+        }
 
-        match process_image(
-            file_data.as_bytes(),
-            &upload_config,
-            &unique_file_name,
-            &upload_dir,
-            &open_id,
-        )
-        .await
-        {
-            Ok((original_path, thumbnail_path)) => {
-                info!(
-                    file_name = %unique_file_name,
-                    original = ?original_path,
-                    thumbnail = ?thumbnail_path,
-                    "图片处理成功"
-                );
+        // 权限检查：允许文件所有者、好友或同群组成员访问
+        if file_owner_open_id != current_open_id {
+            // 先检查是否是好友关系
+            let is_friend =
+                match im_friendship_service::is_friend(&current_open_id, &file_owner_open_id).await
+                {
+                    Ok(is_friend) => is_friend,
+                    Err(e) => {
+                        warn!(
+                            current_open_id = %current_open_id,
+                            file_owner_open_id = %file_owner_open_id,
+                            error = ?e,
+                            "检查好友关系失败"
+                        );
+                        false
+                    }
+                };
 
-                return json_ok(MyResponse::success_with_msg(thumbnail_path));
-            }
-            Err(e) => {
-                error!(error = %e, open_id = %open_id, "处理图片失败");
-                return Err(AppError::internal("处理图片失败"));
+            // 如果不是好友，检查是否在同一个群组中
+            if !is_friend {
+                // 获取当前用户的所有群组
+                let current_user_groups =
+                    match im_group_service::get_user_groups(&current_open_id).await {
+                        Ok(groups) => groups,
+                        Err(e) => {
+                            warn!(
+                                current_open_id = %current_open_id,
+                                error = ?e,
+                                "获取当前用户群组失败"
+                            );
+                            vec![]
+                        }
+                    };
+
+                // 获取文件所有者的所有群组
+                let owner_groups =
+                    match im_group_service::get_user_groups(&file_owner_open_id).await {
+                        Ok(groups) => groups,
+                        Err(e) => {
+                            warn!(
+                                file_owner_open_id = %file_owner_open_id,
+                                error = ?e,
+                                "获取文件所有者群组失败"
+                            );
+                            vec![]
+                        }
+                    };
+
+                // 检查是否有共同的群组
+                let has_common_group = current_user_groups.iter().any(|current_group| {
+                    owner_groups
+                        .iter()
+                        .any(|owner_group| current_group.group_id == owner_group.group_id)
+                });
+
+                if !has_common_group {
+                    warn!(
+                        current_open_id = %current_open_id,
+                        file_owner_open_id = %file_owner_open_id,
+                        "用户尝试访问非好友且非同群组的文件"
+                    );
+                    return Err(AppError::public("无权访问此文件"));
+                }
             }
         }
-    }
 
-    Err(AppError::internal("未找到文件"))
+        let file_path = PathBuf::from(&upload_config.path)
+            .join(file_owner_open_id)
+            .join(&file_name);
+
+        if !file_path.exists() {
+            return Err(AppError::public("文件不存在"));
+        }
+
+        // 缓存两个月
+        resp.add_header("Cache-Control", "public, max-age=5184000", true)
+            .unwrap();
+
+        match NamedFile::builder(file_path)
+            //.attached_name("image.jpg")  // 加上这个在浏览器就会变成下载
+            .build()
+            .await
+        {
+            Ok(file) => file.send(req.headers(), resp).await,
+            Err(_) => resp.render(StatusError::internal_server_error()),
+        }
+
+        return Ok(());
+    } else {
+        Err(AppError::unauthorized("用户未登录"))
+    }
 }

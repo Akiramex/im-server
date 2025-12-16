@@ -12,7 +12,8 @@ pub fn root() -> Router {
 
 pub fn create_router() -> Vec<Router> {
     let v1 = Router::with_path("api/v1")
-        .push(Router::with_path("upload").post(upload_api::test_upload_file))
+        .push(Router::with_path("upload").post(upload_api::upload_file))
+        .push(Router::with_path("download/{open_id}/{*+file_name}").get(upload_api::get_file))
         .push(
             Router::with_path("auth")
                 .push(Router::with_path("login").post(auth_api::post_login))
