@@ -150,7 +150,6 @@ pub async fn add_friend(
         let add_source_clone = req.add_source.clone();
         let message_clone = req.message.clone();
 
-        let not = utils::now_timestamp();
         let timestamp = OffsetDateTime::now_utc();
         let friendship_request = ImFriendshipRequest {
             id: request_id.clone(),
@@ -163,7 +162,7 @@ pub async fn add_friend(
             approve_status: Some(0), // 0: 待处理
             create_time: Some(timestamp),
             update_time: Some(timestamp),
-            sequence: Some(not),
+            sequence: Some(timestamp.unix_timestamp() * 1000),
             del_flag: Some(1),
             version: Some(1),
         };

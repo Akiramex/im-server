@@ -1,4 +1,4 @@
-use crate::{db, prelude::*, utils::now_timestamp};
+use crate::{db, prelude::*};
 
 use crate::models::{ImFriendship, ImFriendshipRequest};
 
@@ -296,7 +296,7 @@ pub async fn add_friend(
     if is_owner_to_friend && is_friend_to_owner {
         return Err(AppError::public("已经是好友"));
     }
-    let now = now_timestamp();
+
     let timestamp = OffsetDateTime::now_utc();
 
     let mut tx = conn.begin().await?;
@@ -317,7 +317,7 @@ pub async fn add_friend(
          to_id,
          remark,
          timestamp,
-         now,
+         timestamp.unix_timestamp() * 1000,
          add_source,
     )
     .execute(&mut *tx)
@@ -339,7 +339,7 @@ pub async fn add_friend(
         owner_id,
         remark,
         timestamp,
-        now,
+        timestamp.unix_timestamp() * 1000,
         add_source,
     )
     .execute(&mut *tx)
@@ -461,7 +461,7 @@ pub async fn black_friend(owner_id: &str, to_id: &str) -> AppResult<()> {
          "#,
         new_black,
         if new_black == 2 {
-            Some(now_timestamp())
+            Some(OffsetDateTime::now_utc().unix_timestamp() * 1000)
         } else {
             None
         },
@@ -514,9 +514,8 @@ pub async fn create_friendship_request(request: ImFriendshipRequest) -> AppResul
     .execute(conn)
     .await
     .ok(); // 忽略删除错误（可能没有旧记录）
-    let now = now_timestamp();
-    let timestamp = OffsetDateTime::from_unix_timestamp(now / 1000)
-        .unwrap_or_else(|_| OffsetDateTime::now_utc());
+
+    let timestamp = OffsetDateTime::now_utc();
 
     let result = sqlx::query!(
         r#"
@@ -537,7 +536,7 @@ pub async fn create_friendship_request(request: ImFriendshipRequest) -> AppResul
         request.message,
         timestamp,
         timestamp,
-        now,
+        timestamp.unix_timestamp() * 1000,
     )
     .execute(conn)
     .await;

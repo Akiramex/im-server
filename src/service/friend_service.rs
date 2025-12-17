@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use crate::utils::now_timestamp;
 use time::OffsetDateTime;
 
 use crate::db;
@@ -12,7 +11,6 @@ pub async fn add_friend(user_id: &str, friend_id: &str) -> AppResult<()> {
     }
 
     // 插入好友关系，双向
-    let now = now_timestamp();
     let timestamp = OffsetDateTime::now_utc();
     sqlx::query!(
         r#"
@@ -25,7 +23,7 @@ pub async fn add_friend(user_id: &str, friend_id: &str) -> AppResult<()> {
         "#,
         user_id,
         friend_id,
-        now,
+        timestamp.unix_timestamp() * 1000,
         timestamp
     )
     .execute(conn)
@@ -42,7 +40,7 @@ pub async fn add_friend(user_id: &str, friend_id: &str) -> AppResult<()> {
         "#,
         friend_id,
         user_id,
-        now,
+        timestamp.unix_timestamp() * 1000,
         timestamp
     )
     .execute(conn)

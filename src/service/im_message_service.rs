@@ -1,4 +1,4 @@
-use time::OffsetDateTime;
+use time::{OffsetDateTime, serde::timestamp};
 
 use crate::{
     db,
@@ -187,8 +187,7 @@ pub async fn get_group_message_status(
         let user_ids = RedisClient::get_group_message_read_users(group_id, message_id)
             .await
             .map_err(|_| AppError::internal("Redis 操作失败"))?;
-
-        let now = utils::now_timestamp();
+        let timestamp = OffsetDateTime::now_utc();
         // 转换为 ImGroupMessageStatus 格式
         let statuses = user_ids
             .into_iter()
@@ -197,8 +196,8 @@ pub async fn get_group_message_status(
                 message_id: message_id.to_string(),
                 to_id,
                 read_status: Some(1),
-                create_time: Some(now),
-                update_time: Some(now),
+                create_time: Some(timestamp.unix_timestamp() * 1000),
+                update_time: Some(timestamp.unix_timestamp() * 1000),
                 version: Some(1),
             })
             .collect();

@@ -1,4 +1,5 @@
 use time::OffsetDateTime;
+use time::serde::timestamp;
 
 use crate::db;
 use crate::models::{ImSafeUser, ImUser, ImUserData};
@@ -206,8 +207,6 @@ pub async fn create(
     // 加密密码
     let password_hash = utils::hash_password(&password)?;
 
-    let now = utils::now_timestamp();
-
     // 检查 open_id 是否已存在（user_id 对应 open_id）
     let existing = sqlx::query!("SELECT id FROM users WHERE open_id = $1", user_id)
         .fetch_optional(conn)
@@ -216,6 +215,8 @@ pub async fn create(
     if existing.is_some() {
         return Err(AppError::public("open_id 冲突"));
     }
+
+    let timestamp = OffsetDateTime::now_utc();
 
     // 插入到 users 表，使用 open_id 作为 user_id
     // 注意：users 表需要 email 字段，这里使用 user_id@im.local 作为临时 email
@@ -228,7 +229,7 @@ pub async fn create(
         email,
         password_hash,
         mobile,
-        now
+        timestamp.unix_timestamp() * 1000,
     )
     .execute(conn)
     .await?;
@@ -238,14 +239,11 @@ pub async fn create(
         user_name: Some(user_name),
         password: Some(password_hash),
         mobile,
-        create_time: Some(now),
-        update_time: Some(now),
+        create_time: Some(timestamp.unix_timestamp() * 1000),
+        update_time: Some(timestamp.unix_timestamp() * 1000),
         version: Some(1),
         del_flag: Some(1),
     };
-
-    let offset_data_time = OffsetDateTime::from_unix_timestamp(now / 1000)
-        .unwrap_or_else(|_| OffsetDateTime::now_utc());
 
     // 自动创建对应的 im_user_data 记录
     let default_user_data = ImUserData {
@@ -263,13 +261,13 @@ pub async fn create(
         user_type: 1,          // 默认普通用户
         del_flag: 1,           // 默认未删除
         extra: None,
-        create_time: Some(offset_data_time),
-        update_time: Some(offset_data_time),
+        create_time: Some(timestamp),
+        update_time: Some(timestamp),
         version: Some(1),
     };
 
     // 创建用户数据记录
-    if let Err(e) = create_user_data_internal(default_user_data, offset_data_time).await {
+    if let Err(e) = create_user_data_internal(default_user_data, timestamp).await {
         tracing::warn!(error = ?e, user_id = %user_id, "创建用户数据记录失败，但用户已创建");
     }
 

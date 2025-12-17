@@ -1,8 +1,11 @@
+#![allow(dead_code)]
 pub mod password;
 pub use password::{hash_password, verify_password};
 
 pub mod redis;
 pub use redis::{RedisClient, RedisConfig, init_redis_client};
+
+pub mod mqtt;
 
 pub mod snowflake;
 
