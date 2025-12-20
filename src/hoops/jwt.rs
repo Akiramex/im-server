@@ -1,10 +1,10 @@
+use crate::config;
+use crate::prelude::*;
+use crate::service;
+use crate::service::auth_service::verify_token;
 use salvo::jwt_auth::{self, CookieFinder, HeaderFinder, JwtTokenFinder, QueryFinder};
 use salvo::prelude::*;
 use tracing::warn;
-
-use crate::config;
-use crate::service::auth_service::verify_token;
-use crate::{AppError, service};
 
 #[handler]
 pub async fn auth_hoop(

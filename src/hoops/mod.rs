@@ -9,7 +9,7 @@ mod jwt;
 pub use cors::cors_hoop;
 pub use jwt::auth_hoop;
 
-use crate::AppError;
+use crate::prelude::AppError;
 
 #[handler]
 pub async fn catch_status_error(

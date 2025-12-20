@@ -4,10 +4,11 @@ use salvo::{
 };
 
 use crate::{
-    SubscriptionService, db,
+    db,
     models::{ChatMessage, ImSingleMessage, User},
     prelude::*,
     service::{im_message_service, user_service},
+    utils::subcription::SubscriptionService,
 };
 use salvo::{
     Depot,

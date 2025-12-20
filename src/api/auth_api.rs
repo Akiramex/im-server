@@ -1,7 +1,6 @@
 use crate::{
-    MyResponse, config,
+    config,
     dto::{CreateUserReq, LoginReq, LoginResp},
-    json_ok,
     models::SafeUser,
     prelude::*,
     service::{auth_service, user_service},

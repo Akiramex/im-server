@@ -3,7 +3,7 @@ use salvo::oapi::{self, EndpointOutRegister, ToSchema};
 use salvo::prelude::*;
 use thiserror::Error;
 
-use crate::MyResponse;
+use crate::prelude::MyResponse;
 
 #[derive(Error, Debug)]
 pub enum AppError {

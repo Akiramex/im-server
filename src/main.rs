@@ -2,35 +2,23 @@ use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::prelude::*;
-use crate::utils::subcription::SubscriptionService;
+use im_server::prelude::*;
+use im_server::utils::subcription::SubscriptionService;
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
 use tokio::signal;
 
-mod api;
-mod config;
-mod db;
-mod dto;
-mod error;
-mod hoops;
-mod models;
-mod prelude;
-mod routers;
-mod service;
-mod utils;
-
 #[tokio::main]
 async fn main() {
-    crate::config::init();
-    let config = crate::config::get();
+    im_server::config::init();
+    let config = im_server::config::get();
     let _guard = config.log.guard();
 
-    crate::db::init(&config.db).await;
+    im_server::db::init(&config.db).await;
 
     match tokio::time::timeout(
         Duration::from_secs(5),
-        crate::utils::init_redis_client(&config.redis),
+        im_server::utils::init_redis_client(&config.redis),
     )
     .await
     {
@@ -45,16 +33,16 @@ async fn main() {
         }
     }
 
-    let router = crate::routers::root();
+    let router = im_server::routers::root();
     info!("{config:#?}");
     info!("{router:?}");
 
-    let catcher = Catcher::default().hoop(hoops::catch_status_error);
+    let catcher = Catcher::default().hoop(im_server::hoops::catch_status_error);
     let service = Service::new(router)
         .catcher(catcher)
         .hoop(affix_state::inject(Arc::new(SubscriptionService::new())))
         .hoop(Logger::new())
-        .hoop(hoops::cors_hoop());
+        .hoop(im_server::hoops::cors_hoop());
 
     let listen_addr = "127.0.0.1:8080";
 
