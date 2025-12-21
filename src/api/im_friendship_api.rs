@@ -1,15 +1,17 @@
-use salvo::oapi::extract::{JsonBody, PathParam, QueryParam};
-use salvo::prelude::*;
-use time::OffsetDateTime;
+use std::sync::Arc;
 
 use crate::dto::{
     AddFriendRequest, GetFriendsResp, GetFriendshipRequests, GetFriendshipResp,
     HandleFriendshipRequests, SimpleFriendshipResp, UpdateRemarkReq,
 };
-use crate::models::User;
 use crate::models::im_friendship::ImFriendshipRequest;
+use crate::models::{ChatMessage, User};
 use crate::service::{im_friendship_service, user_service};
-use crate::{prelude::*, utils};
+use crate::utils::subcription::SubscriptionService;
+use crate::{db, mqtt, prelude::*, utils};
+use salvo::oapi::extract::{JsonBody, PathParam, QueryParam};
+use salvo::prelude::*;
+use time::OffsetDateTime;
 
 /// 根据open_id获取好友列表
 ///
@@ -76,6 +78,11 @@ pub async fn add_friend(
     req: JsonBody<AddFriendRequest>,
 ) -> JsonResult<MyResponse<()>> {
     if let Ok(from_user) = depot.obtain::<User>() {
+        let subscription_service = depot
+            .obtain::<Arc<SubscriptionService>>()
+            .map_err(|_| AppError::internal("SubscriptionService not found"))?;
+        let conn = db::pool();
+        let publisher = mqtt::get_mqtt_publisher();
         let req = req.into_inner();
 
         let from_id = from_user.open_id.clone();
@@ -183,8 +190,82 @@ pub async fn add_friend(
                 };
 
                 if let Ok(to_user) = to_user {
-                    error!("嘟嘟嘟 --- MQTT功能待完成");
-                    //todo!()
+                    // 获取接收者的订阅ID
+                    let subscription_ids = {
+                        let mut ids = subscription_service.get_subscription_ids(to_user.id);
+                        // 如果内存中没有，从数据库查询（只查询最近24小时内创建的订阅，过滤掉已不在线的用户）
+                        if ids.is_empty() {
+                            if let Ok(db_subscriptions) = sqlx::query_scalar!(
+                                r#"
+                                SELECT subscription_id FROM subscriptions
+                                 WHERE user_id = $1
+                                 AND created_at >= NOW() - INTERVAL '24 HOUR'
+                                 ORDER BY created_at DESC
+                                 "#,
+                                to_user.id
+                            )
+                            .fetch_all(conn)
+                            .await
+                            {
+                                for sub_id in &db_subscriptions {
+                                    subscription_service
+                                        .add_subscription_id(sub_id.clone(), to_user.id);
+                                }
+                                ids = subscription_service.get_subscription_ids(to_user.id);
+                            }
+                        }
+                        ids
+                    };
+
+                    // 构建好友请求通知消息
+                    let notification_message = ChatMessage {
+                        message_id: request_id.clone(),
+                        from_user_id: from_id_clone.clone(),
+                        to_user_id: to_id_clone.clone(),
+                        message: format!(
+                            r#"{{"type":"friendship_request","request_id":"{}","from_id":"{}","to_id":"{}","remark":{},"message":{},"add_source":{}}}"#,
+                            request_id,
+                            from_id_clone,
+                            to_id_clone,
+                            remark_clone
+                                .as_ref()
+                                .map(|r| format!("\"{}\"", r))
+                                .unwrap_or_else(|| "null".to_string()),
+                            message_clone
+                                .as_ref()
+                                .map(|m| format!("\"{}\"", m))
+                                .unwrap_or_else(|| "null".to_string()),
+                            add_source_clone
+                                .as_ref()
+                                .map(|s| format!("\"{}\"", s))
+                                .unwrap_or_else(|| "null".to_string())
+                        ),
+                        timestamp_ms: OffsetDateTime::now_utc().unix_timestamp() * 1000,
+                        file_url: None,
+                        file_name: None,
+                        file_type: None,
+                        chat_type: Some(1), // 1 = 单聊（好友请求也是单聊的一种）
+                    };
+
+                    // 无论用户是否在线，都通过 MQTT 发布通知
+                    // MQTT broker 会自动处理离线消息（使用 QoS 1 和 clean_session=false）
+                    let to_mqtt_id = to_user.open_id.clone();
+                    let topic = utils::mqtt_user_topic(&to_mqtt_id);
+                    let is_online = !subscription_ids.is_empty();
+                    info!(to_id = %to_id_clone, is_online = is_online, %topic, "通过MQTT发布好友请求通知（broker会自动处理离线消息）");
+
+                    match utils::encode_message(&notification_message) {
+                        Ok(payload) => {
+                            if let Err(e) = publisher.publish(&topic, payload).await {
+                                error!(to_id = %to_id_clone, %topic, error = %e, "好友请求MQTT发布失败");
+                            } else {
+                                info!(to_id = %to_id_clone, %topic, is_online = is_online, "好友请求已通过MQTT发布（如果用户离线，broker会存储消息）");
+                            }
+                        }
+                        Err(e) => {
+                            error!(error = %e, "好友请求消息编码失败");
+                        }
+                    }
                 } else {
                     warn!(to_id = %to_id_clone, "无法获取接收者信息，无法通过MQTT发送好友请求通知");
                     // 无法获取用户信息时，无法通过 MQTT 发布，但好友请求已保存到数据库

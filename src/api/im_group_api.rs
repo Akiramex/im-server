@@ -9,11 +9,13 @@ use crate::models::ImGroup;
 use crate::models::ImGroupMember;
 use crate::models::ImGroupMessage;
 use crate::models::User;
+use crate::mqtt;
 use crate::prelude::*;
 use crate::service::im_friendship_service;
 use crate::service::im_group_service;
 use crate::service::im_message_service;
 use crate::service::user_service;
+use crate::utils;
 use crate::utils::subcription::SubscriptionService;
 use salvo::oapi::endpoint;
 use salvo::oapi::extract::{JsonBody, PathParam};
@@ -420,8 +422,9 @@ pub async fn delete_group(
 pub async fn dissolve_group(
     group_id: PathParam<String>,
     depot: &mut Depot,
-) -> JsonResult<MyResponse<()>> {
+) -> JsonResult<MyResponse<String>> {
     if let Ok(from_user) = depot.obtain::<User>() {
+        let publisher = mqtt::get_mqtt_publisher();
         let group_id = group_id.into_inner();
         let owner_id = from_user.open_id.clone();
         let subscription_service = depot
@@ -542,9 +545,28 @@ pub async fn dissolve_group(
                 }
                 ids
             };
-            error!("MQTT 待完成")
+            // 获取成员的MQTT ID
+            let member_mqtt_id = member_user.open_id;
+            // 通过 MQTT 推送系统消息
+            let topic = utils::mqtt_user_topic(&member_mqtt_id);
+            let is_online = !subscription_ids.is_empty();
+            info!(member_id = %member_open_id, is_online = is_online, %topic, "通过MQTT推送群组解散系统消息");
+
+            match utils::encode_message(&chat_message) {
+                Ok(payload) => {
+                    if let Err(e) = publisher.publish(&topic, payload).await {
+                        warn!(member_id = %member_open_id, error = ?e, "推送群组解散系统消息失败");
+                    }
+                }
+                Err(e) => {
+                    warn!(member_id = %member_open_id, error = ?e, "编码群组解散系统消息失败");
+                }
+            }
         }
-        json_ok(MyResponse::success_with_msg("MQTT 待完成"))
+        json_ok(MyResponse::success_with_data(
+            "Ok",
+            "群组已解散".to_string(),
+        ))
     } else {
         Err(AppError::unauthorized("未登录"))
     }
