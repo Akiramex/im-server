@@ -5,6 +5,7 @@ pub mod dto;
 pub mod error;
 pub mod hoops;
 pub mod models;
+pub mod mqtt;
 pub mod prelude;
 pub mod routers;
 pub mod service;

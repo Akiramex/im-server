@@ -2,8 +2,8 @@ use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 
-use im_server::prelude::*;
 use im_server::utils::subcription::SubscriptionService;
+use im_server::{mqtt, prelude::*};
 use salvo::server::ServerHandle;
 use salvo::{catcher::Catcher, prelude::*};
 use tokio::signal;
@@ -27,11 +27,16 @@ async fn main() {
                 .map_err(|e| format!("redis init error: {}", e))
                 .unwrap();
         }
-        Err(e) => {
-            error!("Redis 链接超时，server启动失败: {:?}", e);
+        Err(_) => {
+            error!("Redis 链接超时，server启动失败: Timeout limit {}s", 5);
             exit(1);
         }
     }
+
+    mqtt::init_mqtt_client(&config.mqtt)
+        .await
+        .map_err(|e| format!("mqtt init error: {}", e))
+        .unwrap();
 
     let router = im_server::routers::root();
     info!("{config:#?}");

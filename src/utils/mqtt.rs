@@ -1,15 +1,36 @@
 use anyhow::Result;
 use rumqttc::{Event, MqttOptions, Packet, QoS};
+use serde::Deserialize;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MqttConfig {
+    #[serde(default = "default_host")]
     pub host: String,
+    #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default = "default_client_id")]
     pub client_id: String,
+    #[serde(default = "default_keep_alive_secs")]
     pub keep_alive_secs: u64,
+}
+
+fn default_host() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_port() -> u16 {
+    1883
+}
+
+fn default_client_id() -> String {
+    "im_server".to_string()
+}
+
+fn default_keep_alive_secs() -> u64 {
+    30
 }
 
 impl MqttConfig {
@@ -38,7 +59,7 @@ impl IncomingMessage {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ImMqtt {
     client: rumqttc::AsyncClient,
     tx: broadcast::Sender<IncomingMessage>,

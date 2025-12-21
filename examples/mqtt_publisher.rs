@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     println!("==========================================");
 
     // 1. 获取MQTT代理地址
-    println!("1. MQTT代理地址配置");
+    println!("1. MQTT代理地址配置 ！⚠️ 填写 localhost 会报错");
     print!("   请输入MQTT代理地址 (默认: broker.emqx.io): ");
     io::stdout().flush()?;
     let mut host = String::new();

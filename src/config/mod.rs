@@ -4,6 +4,7 @@ mod log_config;
 mod upload_config;
 
 use crate::utils::RedisConfig;
+use crate::utils::mqtt::MqttConfig;
 use figment::Figment;
 use figment::providers::{Env, Format, Toml, Yaml};
 use serde::Deserialize;
@@ -42,6 +43,7 @@ pub struct ServerConfig {
     pub jwt: JwtConfig,
     pub redis: RedisConfig,
     pub upload: UploadConfig,
+    pub mqtt: MqttConfig,
 }
 
 pub fn default_true() -> bool {
