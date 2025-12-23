@@ -150,6 +150,117 @@ impl RedisClient {
             .query_async(&mut conn)
             .await
     }
+    /// 添加离线消息到队列（使用 open_id）
+    /// 使用 Redis List 存储，key: offline:message:{open_id}
+    /// 使用 RPUSH 将新消息追加到列表末尾，确保消息按时间顺序（从旧到新）存储
+    pub async fn add_offline_message(
+        open_id: &str,
+        message: &str,
+    ) -> Result<(), redis::RedisError> {
+        use tracing::info;
+        let key = format!("offline:message:{}", open_id);
+        let mut conn = RedisClient::get_connection();
+
+        // 尝试解析消息以获取 chat_type 用于日志
+        let chat_type_info = if let Ok(json) = serde_json::from_str::<serde_json::Value>(message) {
+            format!("chat_type={:?}", json.get("chat_type"))
+        } else {
+            "无法解析JSON".to_string()
+        };
+
+        info!(
+            open_id = %open_id,
+            key = %key,
+            %chat_type_info,
+            message_preview = if message.len() > 100 { format!("{}...", &message[..100]) } else { message.to_string() },
+            "执行Redis RPUSH操作，存储离线消息"
+        );
+
+        let result = redis::cmd("RPUSH")
+            .arg(&key)
+            .arg(message)
+            .query_async::<i64>(&mut conn)
+            .await?;
+
+        info!(
+            open_id = %open_id,
+            key = %key,
+            list_length = result,
+            %chat_type_info,
+            "✅ Redis RPUSH成功，列表长度: {}",
+            result
+        );
+
+        // 设置过期时间：7天
+        redis::cmd("EXPIRE")
+            .arg(&key)
+            .arg(604800u64) // 7 * 24 * 60 * 60
+            .query_async::<()>(&mut conn)
+            .await?;
+
+        info!(
+            open_id = %open_id,
+            key = %key,
+            %chat_type_info,
+            "Redis EXPIRE设置成功，过期时间7天"
+        );
+
+        Ok(())
+    }
+
+    /// 获取并删除所有离线消息（使用 open_id）
+    /// 返回消息列表，按时间顺序（从旧到新）
+    /// LRANGE 0 -1 从左到右获取所有消息，由于使用 RPUSH，消息已按从旧到新顺序存储
+    pub async fn get_and_clear_offline_messages(
+        open_id: &str,
+    ) -> Result<Vec<String>, redis::RedisError> {
+        use tracing::{debug, info};
+        let key = format!("offline:message:{}", open_id);
+        let mut conn = RedisClient::get_connection();
+
+        // 获取所有消息（从左到右，即从旧到新，因为使用 RPUSH 追加）
+        // 如果 key 不存在，LRANGE 会返回空列表，无需先检查 EXISTS
+        let messages: Vec<String> = redis::cmd("LRANGE")
+            .arg(&key)
+            .arg(0)
+            .arg(-1)
+            .query_async(&mut conn)
+            .await?;
+
+        // 只在有消息时输出详细日志，没有消息时使用 debug 级别
+        if !messages.is_empty() {
+            info!(
+                open_id = %open_id,
+                key = %key,
+                message_count = messages.len(),
+                "从Redis获取到 {} 条离线消息",
+                messages.len()
+            );
+
+            // 删除key
+            redis::cmd("DEL")
+                .arg(&key)
+                .query_async::<()>(&mut conn)
+                .await?;
+            debug!(open_id = %open_id, key = %key, "已删除Redis离线消息key");
+        } else {
+            debug!(
+                open_id = %open_id,
+                key = %key,
+                "Redis中没有离线消息"
+            );
+        }
+
+        Ok(messages)
+    }
+
+    /// 获取离线消息数量（使用 open_id）
+    pub async fn get_offline_message_count(open_id: &str) -> Result<usize, redis::RedisError> {
+        let key = format!("offline:message:{}", open_id);
+        let mut conn = RedisClient::get_connection();
+        let count: i64 = redis::cmd("LLEN").arg(&key).query_async(&mut conn).await?;
+        Ok(count as usize)
+    }
 
     // ========== 群消息已读状态相关方法（使用 Redis Set） ==========
 
