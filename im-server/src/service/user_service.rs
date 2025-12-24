@@ -120,7 +120,7 @@ pub async fn create_user(
     .await
     .map_err(|_| AppError::internal("Failed to create user"))?;
 
-    let new_user = User::new(result_id, open_id, name, email);
+    let new_user = User::new(result_id, open_id, name, email, Some(password_hash));
     cache_user(&new_user).await?;
     Ok(new_user)
 }
@@ -458,6 +458,8 @@ pub async fn verify_user(email_or_name: &str, password: &str) -> AppResult<User>
     } else {
         get_by_name(email_or_name).await?
     };
+
+    warn!("user: {:?}", user);
 
     match &user.password_hash {
         Some(password_hash) => {

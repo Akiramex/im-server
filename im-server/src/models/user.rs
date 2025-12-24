@@ -29,13 +29,19 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(id: i64, open_id: String, name: String, email: String) -> Self {
+    pub fn new(
+        id: i64,
+        open_id: String,
+        name: String,
+        email: String,
+        password_hash: Option<String>,
+    ) -> Self {
         User {
             id,
             open_id,
             name,
             email,
-            password_hash: None,
+            password_hash: password_hash,
             file_name: None,
             abstract_field: None,
             phone: None,
