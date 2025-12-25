@@ -1,4 +1,8 @@
 [workspace]
-members = ["im-server", "im-share", "im-connect"]
+members = [
+    "crates/im-server",
+    "crates/im-share",
+    "crates/im-connect"
+]
 
 resolver = "3"

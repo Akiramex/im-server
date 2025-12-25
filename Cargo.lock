@@ -1742,15 +1742,11 @@ name = "im-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "argon2",
- "dashmap",
  "figment",
+ "im-share",
  "image",
  "jsonwebtoken",
- "rand 0.9.2",
- "redis",
  "reqwest",
- "rumqttc",
  "salvo",
  "serde",
  "serde_json",
@@ -1767,6 +1763,21 @@ dependencies = [
 [[package]]
 name = "im-share"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "dashmap",
+ "rand 0.9.2",
+ "redis",
+ "reqwest",
+ "rumqttc",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "ulid",
+]
 
 [[package]]
 name = "image"
