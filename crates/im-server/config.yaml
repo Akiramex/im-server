@@ -1,5 +1,5 @@
 log:
-  level: info
+  filter_level: info
   format: pretty
 
 jwt:
@@ -20,4 +20,4 @@ upload:
   path: uploads
 
 mqtt:
-  host: 127.0.0.1
+  port: 1883

@@ -18,7 +18,7 @@ impl MqttPublisher {
         // 等待一小段时间让连接有机会建立
         // 注意：这里不能等待连接完全建立，因为 ImMqtt::connect 是同步的
         // 实际的连接建立是在后台异步任务中进行的
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
         Self(im)
     }

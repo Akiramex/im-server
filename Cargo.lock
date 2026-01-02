@@ -1736,6 +1736,25 @@ dependencies = [
 [[package]]
 name = "im-connect"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "figment",
+ "im-share",
+ "image",
+ "jsonwebtoken",
+ "reqwest",
+ "salvo",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "ulid",
+]
 
 [[package]]
 name = "im-server"

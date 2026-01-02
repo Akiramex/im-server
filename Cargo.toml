@@ -5,4 +5,4 @@ members = [
     "crates/im-connect"
 ]
 
-resolver = "3"
+resolver = "2"
