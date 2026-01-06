@@ -7,6 +7,7 @@ use std::process::exit;
 use std::time::Duration;
 use tokio::signal;
 
+mod api;
 mod config;
 mod hoops;
 mod prelude;
